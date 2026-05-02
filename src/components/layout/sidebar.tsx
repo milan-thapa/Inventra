@@ -52,10 +52,9 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { sidebarOpen } = useUIStore();
-  const { activeProfileId, setActiveProfileId, setProfiles } = useProfileStore();
+  const { activeProfileId, profiles, setActiveProfileId, setProfiles } = useProfileStore();
   const [toolsOpen, setToolsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [profiles, setLocalProfiles] = useState<Profile[]>([]);
 
   useEffect(() => {
     async function fetchProfiles() {
