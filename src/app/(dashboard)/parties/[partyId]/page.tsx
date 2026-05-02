@@ -33,8 +33,6 @@ export default async function PartyDetailPage({ params }: { params: { partyId: s
         partyTransactions: partyRes.data.partyTransactions.map(tx => ({...tx, amount: tx.amount.toNumber()}))
       }}
       profileId={profileId}
-      onPaymentIn={() => {}}
-      onPaymentOut={() => {}}
     />
   );
 }

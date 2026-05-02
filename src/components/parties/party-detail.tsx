@@ -28,13 +28,13 @@ interface Party {
 export function PartyDetail({
   party,
   profileId: _,
-  onPaymentIn,
-  onPaymentOut,
+  onPaymentIn = () => {},
+  onPaymentOut = () => {},
 }: {
   party: Party;
   profileId: string;
-  onPaymentIn: () => void;
-  onPaymentOut: () => void;
+  onPaymentIn?: () => void;
+  onPaymentOut?: () => void;
 }) {
   const balance = Number(party.openingBalance);
   const isReceivable = party.balanceType === "TO_RECEIVE";
