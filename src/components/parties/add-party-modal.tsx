@@ -28,7 +28,7 @@ export function AddPartyModal({
   open: boolean;
   onClose: () => void;
   profileId: string;
-  onSuccess?: (party: unknown) => void;
+  onSuccess?: (party: any) => void;
 }) {
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("additional");

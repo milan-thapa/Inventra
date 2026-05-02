@@ -53,7 +53,9 @@ export function AddPaymentInModal({
   useEffect(() => {
     if (open) {
       getParties(profileId).then((res) => {
-        if (res.data) setParties(res.data);
+        if (res.data) {
+          setParties(res.data.map(p => ({ ...p, openingBalance: Number(p.openingBalance) })));
+        }
       });
     }
   }, [open, profileId]);
@@ -235,7 +237,9 @@ export function AddPaymentOutModal({
   useEffect(() => {
     if (open) {
       getParties(profileId).then((res) => {
-        if (res.data) setParties(res.data);
+        if (res.data) {
+          setParties(res.data.map(p => ({ ...p, openingBalance: Number(p.openingBalance) })));
+        }
       });
     }
   }, [open, profileId]);

@@ -43,7 +43,9 @@ const LANGUAGES = [
   { code: "ne", label: "नेपाली", flag: "🇳🇵" },
 ];
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginContent() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [lang, setLang] = useState("en");
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -374,5 +376,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
