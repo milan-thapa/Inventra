@@ -1,0 +1,174 @@
+/* src/app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ───────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  /* ── Dark Theme (default — matching Karobar App) ──────── */
+  :root,
+  [data-theme="dark"] {
+    --background:         222 18% 10%;
+    --foreground:         210 40% 98%;
+    --card:               222 18% 13%;
+    --card-foreground:    210 40% 98%;
+    --popover:            222 18% 13%;
+    --popover-foreground: 210 40% 98%;
+    --primary:            142 76% 36%;
+    --primary-foreground: 355 100% 97%;
+    --secondary:          217 19% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted:              217 19% 17%;
+    --muted-foreground:   215 20% 55%;
+    --accent:             217 19% 20%;
+    --accent-foreground:  210 40% 98%;
+    --destructive:        0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border:             217 19% 20%;
+    --input:              217 19% 20%;
+    --ring:               142 76% 36%;
+    --radius:             0.5rem;
+
+    /* ── Inventra custom vars ─────────────────────────── */
+    --sidebar-bg:         222 18% 8%;
+    --sidebar-width:      220px;
+    --header-height:      56px;
+    --income-card-bg:     142 55% 12%;
+    --expense-card-bg:    0 55% 15%;
+    --receive-card-bg:    180 55% 12%;
+    --give-card-bg:       0 60% 18%;
+  }
+
+  /* ── Light Theme ──────────────────────────────────────── */
+  [data-theme="light"] {
+    --background:         0 0% 98%;
+    --foreground:         222 47% 11%;
+    --card:               0 0% 100%;
+    --card-foreground:    222 47% 11%;
+    --popover:            0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary:            142 76% 36%;
+    --primary-foreground: 355 100% 97%;
+    --secondary:          210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted:              210 40% 96%;
+    --muted-foreground:   215 16% 47%;
+    --accent:             210 40% 94%;
+    --accent-foreground:  222 47% 11%;
+    --destructive:        0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border:             214 32% 91%;
+    --input:              214 32% 91%;
+    --ring:               142 76% 36%;
+
+    --sidebar-bg:         0 0% 100%;
+    --income-card-bg:     142 55% 94%;
+    --expense-card-bg:    0 86% 96%;
+    --receive-card-bg:    180 55% 94%;
+    --give-card-bg:       0 60% 96%;
+  }
+
+  /* ── Classic Theme ────────────────────────────────────── */
+  [data-theme="classic"] {
+    --background:         220 13% 15%;
+    --foreground:         210 40% 95%;
+    --card:               220 13% 18%;
+    --card-foreground:    210 40% 95%;
+    --popover:            220 13% 18%;
+    --popover-foreground: 210 40% 95%;
+    --primary:            142 76% 36%;
+    --primary-foreground: 355 100% 97%;
+    --secondary:          220 13% 22%;
+    --secondary-foreground: 210 40% 95%;
+    --muted:              220 13% 22%;
+    --muted-foreground:   215 20% 50%;
+    --accent:             220 13% 25%;
+    --accent-foreground:  210 40% 95%;
+    --destructive:        0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border:             220 13% 25%;
+    --input:              220 13% 25%;
+    --ring:               142 76% 36%;
+
+    --sidebar-bg:         220 13% 12%;
+    --income-card-bg:     142 40% 15%;
+    --expense-card-bg:    0 40% 18%;
+    --receive-card-bg:    180 40% 15%;
+    --give-card-bg:       0 45% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* ── Scrollbar styling ──────────────────────────────── */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+}
+
+@layer components {
+  /* ── Stat Cards ─────────────────────────────────────── */
+  .stat-card-income  { background: hsl(var(--income-card-bg)); }
+  .stat-card-expense { background: hsl(var(--expense-card-bg)); }
+  .stat-card-receive { background: hsl(var(--receive-card-bg)); }
+  .stat-card-give    { background: hsl(var(--give-card-bg)); }
+
+  /* ── Sidebar ────────────────────────────────────────── */
+  .sidebar {
+    background: hsl(var(--sidebar-bg));
+    width: var(--sidebar-width);
+    min-height: 100vh;
+  }
+
+  /* ── Glass morphism panels ──────────────────────────── */
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+  }
+
+  /* ── Action button - Add Expense ────────────────────── */
+  .btn-expense {
+    @apply bg-rose-500 hover:bg-rose-600 text-white font-semibold;
+  }
+
+  /* ── Action button - Add Income ─────────────────────── */
+  .btn-income {
+    @apply bg-emerald-600 hover:bg-emerald-700 text-white font-semibold;
+  }
+
+  /* ── Data table ─────────────────────────────────────── */
+  .data-table th {
+    @apply text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3;
+  }
+  .data-table td {
+    @apply px-4 py-3 text-sm;
+  }
+  .data-table tr {
+    @apply border-b border-border/50 hover:bg-accent/30 transition-colors;
+  }
+}
+
+/* ── Print styles ──────────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .print-only { display: block !important; }
+}

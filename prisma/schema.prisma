@@ -1,0 +1,400 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ─────────────────────────────────────────
+// AUTH.JS REQUIRED MODELS
+// ─────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  profiles Profile[]
+  notifications Notification[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────
+// PROFILE (Business or Personal)
+// ─────────────────────────────────────────
+
+model Profile {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         ProfileType @default(BUSINESS)
+  name         String
+  category     String?
+  logo         String?
+  address      String?
+
+  // Settings
+  currency       String      @default("Rs.")
+  currencyPos    String      @default("start") // "start" | "end"
+  language       String      @default("en")    // "en" | "ne"
+  calendarType   CalendarType @default(AD)
+  dateFormat     String      @default("DD MMM YYYY")
+  timeFormat     String      @default("12h")
+  numberFormat   String      @default("indian") // "indian" | "international"
+  theme          String      @default("dark")   // "dark" | "light" | "classic"
+  privacyMode    Boolean     @default(false)
+  appLock        Boolean     @default(false)
+
+  // Subscription
+  subscriptionPlan String   @default("trial")
+  subscriptionEnd  DateTime?
+
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  parties           Party[]
+  expenses          Expense[]
+  incomes           Income[]
+  bankAccounts      BankAccount[]
+  reminders         Reminder[]
+  billImages        BillImage[]
+  notes             Note[]
+  expenseCategories ExpenseCategory[]
+  incomeCategories  IncomeCategory[]
+  transactions      Transaction[]
+  notifications     Notification[]
+
+  @@index([userId])
+}
+
+enum ProfileType {
+  BUSINESS
+  PERSONAL
+}
+enum CalendarType {
+  AD
+  BS
+}
+
+// ─────────────────────────────────────────
+// PARTIES (Customers / Suppliers)
+// ─────────────────────────────────────────
+
+model Party {
+  id             String      @id @default(cuid())
+  profileId      String
+  profile        Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  panNumber      String?
+  photo          String?
+  openingBalance Decimal     @default(0) @db.Decimal(15, 2)
+  openingDate    DateTime    @default(now())
+  balanceType    BalanceType @default(TO_RECEIVE)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  partyTransactions PartyTransaction[]
+
+  @@index([profileId])
+}
+
+enum BalanceType {
+  TO_RECEIVE
+  TO_GIVE
+  SETTLED
+}
+
+model PartyTransaction {
+  id            String        @id @default(cuid())
+  partyId       String
+  party         Party         @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  profileId     String
+  receiptNumber Int
+  type          PartyTxType
+  amount        Decimal       @db.Decimal(15, 2)
+  paymentMethod PaymentMethod @default(CASH)
+  remarks       String?
+  billImage     String?
+  date          DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+
+  @@index([partyId])
+  @@index([profileId])
+}
+
+enum PartyTxType {
+  PAYMENT_IN
+  PAYMENT_OUT
+  OPENING_BALANCE
+}
+enum PaymentMethod {
+  CASH
+  BANK
+}
+
+// ─────────────────────────────────────────
+// EXPENSE
+// ─────────────────────────────────────────
+
+model Expense {
+  id            String          @id @default(cuid())
+  profileId     String
+  profile       Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  expenseNo     Int
+  categoryId    String
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id])
+  totalAmount   Decimal         @db.Decimal(15, 2)
+  paymentMethod PaymentMethod   @default(CASH)
+  remarks       String?
+  billImage     String?
+  date          DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  items ExpenseItem[]
+
+  @@index([profileId])
+  @@index([categoryId])
+}
+
+model ExpenseItem {
+  id        String  @id @default(cuid())
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  name      String
+  amount    Decimal @db.Decimal(15, 2)
+}
+
+model ExpenseCategory {
+  id        String    @id @default(cuid())
+  profileId String
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name      String
+  isDefault Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  expenses Expense[]
+
+  @@unique([profileId, name])
+  @@index([profileId])
+}
+
+// ─────────────────────────────────────────
+// INCOME
+// ─────────────────────────────────────────
+
+model Income {
+  id            String         @id @default(cuid())
+  profileId     String
+  profile       Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  incomeNo      Int
+  categoryId    String
+  category      IncomeCategory @relation(fields: [categoryId], references: [id])
+  totalAmount   Decimal        @db.Decimal(15, 2)
+  paymentMethod PaymentMethod  @default(CASH)
+  remarks       String?
+  billImage     String?
+  date          DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  items IncomeItem[]
+
+  @@index([profileId])
+  @@index([categoryId])
+}
+
+model IncomeItem {
+  id       String  @id @default(cuid())
+  incomeId String
+  income   Income  @relation(fields: [incomeId], references: [id], onDelete: Cascade)
+  name     String
+  amount   Decimal @db.Decimal(15, 2)
+}
+
+model IncomeCategory {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  incomes Income[]
+
+  @@unique([profileId, name])
+  @@index([profileId])
+}
+
+// ─────────────────────────────────────────
+// BANK ACCOUNTS
+// ─────────────────────────────────────────
+
+model BankAccount {
+  id             String   @id @default(cuid())
+  profileId      String
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type           String   @default("Bank Account")
+  bankName       String?
+  holderName     String?
+  accountNumber  String?
+  currentBalance Decimal  @default(0) @db.Decimal(15, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([profileId])
+}
+
+// ─────────────────────────────────────────
+// TRANSACTIONS (unified ledger)
+// ─────────────────────────────────────────
+
+model Transaction {
+  id            String          @id @default(cuid())
+  profileId     String
+  profile       Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type          TransactionType
+  referenceId   String
+  amount        Decimal         @db.Decimal(15, 2)
+  description   String?
+  date          DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+
+  @@index([profileId])
+  @@index([date])
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+  PAYMENT_IN
+  PAYMENT_OUT
+}
+
+// ─────────────────────────────────────────
+// REMINDERS
+// ─────────────────────────────────────────
+
+model Reminder {
+  id          String       @id @default(cuid())
+  profileId   String
+  profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title       String
+  type        ReminderType @default(TASK)
+  dueDate     DateTime
+  isCompleted Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([profileId])
+}
+
+enum ReminderType {
+  PAYMENT
+  TASK
+}
+
+// ─────────────────────────────────────────
+// NOTES (Notebook)
+// ─────────────────────────────────────────
+
+model Note {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title     String?
+  body      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+}
+
+// ─────────────────────────────────────────
+// BILL IMAGES (gallery)
+// ─────────────────────────────────────────
+
+model BillImage {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  url         String
+  fileName    String?
+  referenceId String?
+  refType     String?  // "expense" | "income" | "payment"
+  createdAt   DateTime @default(now())
+
+  @@index([profileId])
+}
+
+// ─────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([profileId])
+}
+
