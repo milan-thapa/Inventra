@@ -226,7 +226,7 @@ export function CommandPalette() {
                   <p className="text-sm">
                     No results for{" "}
                     <span className="text-foreground font-medium">
-                      {`"${query}"`}
+                      &ldquo;{query}&rdquo;
                     </span>
                   </p>
                 </div>
