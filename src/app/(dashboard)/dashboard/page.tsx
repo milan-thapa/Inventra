@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getActiveProfile } from "@/lib/actions/profile";
 import { getDashboardStats, getCashflow, getRecentTransactions } from "@/lib/actions/dashboard";
+import { getBusinessDashboardStats, getBusinessCashflow } from "@/lib/actions/business-dashboard";
 import { getReminders } from "@/lib/actions/dashboard";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { CashflowChart } from "@/components/dashboard/cashflow-chart";
@@ -10,6 +11,7 @@ import { TotalBalance } from "@/components/dashboard/total-balance";
 import { UpcomingReminders } from "@/components/dashboard/upcoming-reminders";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { DashboardActions } from "@/components/dashboard/dashboard-actions";
+import { BusinessDashboard } from "@/components/dashboard/business-dashboard";
 
 export const metadata = { title: "Dashboard" };
 
@@ -20,20 +22,38 @@ export default async function DashboardPage() {
   const profileRes = await getActiveProfile();
   if (!profileRes.data) redirect("/onboarding");
 
-  const profileId = profileRes.data.id;
+  const profile = profileRes.data;
+  const profileId = profile.id;
   const profileName = session.user.name?.split(" ")[0] ?? "there";
+  const isBusiness = profile.type === "BUSINESS";
 
   const [statsRes, cashflowRes, txRes, remindersRes] = await Promise.all([
-    getDashboardStats(profileId),
-    getCashflow(profileId, "daily"),
+    isBusiness ? getBusinessDashboardStats(profileId) : getDashboardStats(profileId),
+    isBusiness ? getBusinessCashflow(profileId) : getCashflow(profileId, "daily"),
     getRecentTransactions(profileId, 5),
     getReminders(profileId, false),
   ]);
 
-  const stats     = statsRes.data     ?? { income: 0, expense: 0, toReceive: 0, toGive: 0, totalBalance: 0, currentMonth: "This Month" };
+  const stats     = statsRes.data     ?? (isBusiness 
+    ? { sales: 0, purchases: 0, expense: 0, toReceive: 0, toGive: 0, inventoryValuation: 0, totalBalance: 0, currentMonth: "This Month" }
+    : { income: 0, expense: 0, toReceive: 0, toGive: 0, totalBalance: 0, currentMonth: "This Month" });
+  
   const cashflow  = cashflowRes.data  ?? { chart: [], totalIn: 0, totalOut: 0 };
-  const recentTx  = txRes.data        ?? [];
+  const recentTx  = (txRes.data ?? []).map(tx => ({...tx, amount: Number(tx.amount)}));
   const reminders = remindersRes.data ?? [];
+
+  if (isBusiness) {
+    return (
+      <BusinessDashboard 
+        profile={profile}
+        profileName={profileName}
+        stats={stats}
+        cashflow={cashflow}
+        recentTx={recentTx}
+        reminders={reminders}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -63,7 +83,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent transactions */}
-      <RecentTransactions transactions={recentTx.map(tx => ({...tx, amount: tx.amount.toNumber()}))} />
+      <RecentTransactions transactions={recentTx} />
     </div>
   );
 }

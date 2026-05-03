@@ -47,7 +47,18 @@ export async function getParties(
       },
       orderBy: { createdAt: "desc" },
     });
-    return { data: parties };
+    
+    // Convert Decimal to number for client serialization
+    const serializedParties = parties.map(party => ({
+      ...party,
+      openingBalance: Number(party.openingBalance),
+      partyTransactions: party.partyTransactions.map(tx => ({
+        ...tx,
+        amount: Number(tx.amount)
+      }))
+    }));
+
+    return { data: serializedParties };
   } catch (e) {
     console.error("[getParties]", e);
     return { error: "Failed to fetch parties" };

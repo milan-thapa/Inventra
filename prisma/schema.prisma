@@ -110,6 +110,9 @@ model Profile {
   incomeCategories  IncomeCategory[]
   transactions      Transaction[]
   notifications     Notification[]
+  items             Item[]
+  sales             Sale[]
+  purchases         Purchase[]
 
   @@index([userId])
 }
@@ -144,6 +147,8 @@ model Party {
   updatedAt      DateTime    @updatedAt
 
   partyTransactions PartyTransaction[]
+  sales             Sale[]
+  purchases         Purchase[]
 
   @@index([profileId])
 }
@@ -396,5 +401,108 @@ model Notification {
 
   @@index([userId])
   @@index([profileId])
+}
+
+// ─────────────────────────────────────────
+// INVENTORY & ITEMS
+// ─────────────────────────────────────────
+
+model Item {
+  id             String   @id @default(cuid())
+  profileId      String
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name           String
+  sku            String?
+  purchasePrice  Decimal  @default(0) @db.Decimal(15, 2)
+  sellingPrice   Decimal  @default(0) @db.Decimal(15, 2)
+  stockQuantity  Int      @default(0)
+  unit           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  saleItems      SaleItem[]
+  purchaseItems  PurchaseItem[]
+
+  @@index([profileId])
+}
+
+// ─────────────────────────────────────────
+// SALES (Invoices)
+// ─────────────────────────────────────────
+
+model Sale {
+  id            String    @id @default(cuid())
+  profileId     String
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  invoiceNo     Int
+  partyId       String?
+  party         Party?    @relation(fields: [partyId], references: [id])
+  totalAmount   Decimal   @db.Decimal(15, 2)
+  discount      Decimal   @default(0) @db.Decimal(15, 2)
+  tax           Decimal   @default(0) @db.Decimal(15, 2)
+  grandTotal    Decimal   @db.Decimal(15, 2)
+  paymentMethod PaymentMethod @default(CASH)
+  status        String    @default("PAID") // "PAID", "UNPAID", "PARTIAL"
+  remarks       String?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items         SaleItem[]
+
+  @@index([profileId])
+  @@index([partyId])
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  itemId    String?
+  item      Item?   @relation(fields: [itemId], references: [id])
+  name      String  // Captured at time of sale
+  quantity  Int
+  rate      Decimal @db.Decimal(15, 2)
+  amount    Decimal @db.Decimal(15, 2)
+}
+
+// ─────────────────────────────────────────
+// PURCHASES (Bills)
+// ─────────────────────────────────────────
+
+model Purchase {
+  id            String    @id @default(cuid())
+  profileId     String
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  billNo        Int
+  partyId       String?
+  party         Party?    @relation(fields: [partyId], references: [id])
+  totalAmount   Decimal   @db.Decimal(15, 2)
+  discount      Decimal   @default(0) @db.Decimal(15, 2)
+  tax           Decimal   @default(0) @db.Decimal(15, 2)
+  grandTotal    Decimal   @db.Decimal(15, 2)
+  paymentMethod PaymentMethod @default(CASH)
+  status        String    @default("PAID") // "PAID", "UNPAID", "PARTIAL"
+  remarks       String?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items         PurchaseItem[]
+
+  @@index([profileId])
+  @@index([partyId])
+}
+
+model PurchaseItem {
+  id          String    @id @default(cuid())
+  purchaseId  String
+  purchase    Purchase  @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?     @relation(fields: [itemId], references: [id])
+  name        String    // Captured at time of purchase
+  quantity    Int
+  rate        Decimal   @db.Decimal(15, 2)
+  amount      Decimal   @db.Decimal(15, 2)
 }
 

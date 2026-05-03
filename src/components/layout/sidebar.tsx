@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, Receipt, Wallet, Building2,
   BarChart3, Wrench, HelpCircle, BookOpen, Sparkles,
   Settings, CreditCard, Gift, Bell, Image, ChevronDown,
-  ChevronRight, Plus, Check, Menu, X,
+  ChevronRight, Plus, Check, Menu, X, Package, Tag, ShoppingCart, Store,
 } from "lucide-react";
 import { cn, getInitials, getAvatarColor } from "@/lib/utils";
 import { useUIStore } from "@/stores/profile-store";
@@ -17,11 +17,24 @@ import { useProfileStore } from "@/stores/profile-store";
 import { getProfiles, switchProfile } from "@/lib/actions/profile";
 import { APP_NAME } from "@/lib/constants";
 
-const NAV_ITEMS = [
+const PERSONAL_NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Parties", href: "/parties", icon: Users },
   { label: "Expense", href: "/expense", icon: Receipt },
   { label: "Income", href: "/income", icon: Wallet },
+  { label: "Manage Accounts", href: "/manage-account", icon: Building2 },
+  { label: "Reports", href: "/reports", icon: BarChart3 },
+];
+
+const BUSINESS_NAV_ITEMS = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Quick POS", href: "/sales/quick-pos", icon: Store },
+  { label: "Parties", href: "/parties", icon: Users },
+  { label: "Inventory", href: "/inventory", icon: Package },
+  { label: "Sales", href: "/sales", icon: Tag },
+  { label: "Purchase", href: "/purchase", icon: ShoppingCart },
+  { label: "Expense", href: "/expense", icon: Receipt },
+  { label: "Other Income", href: "/income", icon: Wallet },
   { label: "Manage Accounts", href: "/manage-account", icon: Building2 },
   { label: "Reports", href: "/reports", icon: BarChart3 },
 ];
@@ -79,8 +92,11 @@ export function Sidebar() {
     router.refresh();
   };
 
-  const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+  const isActive = (href: string) => {
+    if (href === "/dashboard") return pathname === href;
+    if (href === "/sales" && pathname.startsWith("/sales/quick-pos")) return false;
+    return pathname.startsWith(href);
+  };
 
   const isToolsActive = TOOLS_ITEMS.some((item) => pathname.startsWith(item.href));
 
@@ -189,7 +205,7 @@ export function Sidebar() {
             {activeProfile?.type === "BUSINESS" ? "Business" : "Personal"}
           </p>
 
-          {NAV_ITEMS.map((item) => (
+          {(activeProfile?.type === "BUSINESS" ? BUSINESS_NAV_ITEMS : PERSONAL_NAV_ITEMS).map((item) => (
             <NavItem
               key={item.href}
               {...item}
