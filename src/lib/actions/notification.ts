@@ -14,6 +14,7 @@ export async function getNotifications(profileId: string) {
       where: {
         userId: session.user.id,
         profileId: profileId,
+        createdAt: { lte: new Date() },
       },
       orderBy: {
         createdAt: "desc",
@@ -36,6 +37,7 @@ export async function markNotificationsAsRead(profileId: string) {
         userId: session.user.id,
         profileId: profileId,
         isRead: false,
+        createdAt: { lte: new Date() },
       },
       data: {
         isRead: true,
@@ -54,7 +56,8 @@ export async function createNotification(
   userId: string,
   type: string,
   message: string,
-  link?: string
+  link?: string,
+  scheduledFor?: Date
 ) {
   try {
     await db.notification.create({
@@ -64,6 +67,7 @@ export async function createNotification(
         type,
         message,
         link,
+        ...(scheduledFor ? { createdAt: scheduledFor } : {}),
       },
     });
   } catch (e) {

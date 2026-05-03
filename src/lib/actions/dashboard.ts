@@ -195,6 +195,16 @@ export async function getReminders(profileId: string, completed = false) {
   if (!profile) return { error: "Unauthorized" };
 
   try {
+    // Auto-complete any past-due reminders
+    await db.reminder.updateMany({
+      where: {
+        profileId,
+        isCompleted: false,
+        dueDate: { lte: new Date() },
+      },
+      data: { isCompleted: true },
+    });
+
     const reminders = await db.reminder.findMany({
       where: { profileId, isCompleted: completed },
       orderBy: { dueDate: "asc" },
@@ -228,7 +238,8 @@ export async function createReminder(
       profile.userId,
       input.type,
       `Reminder: ${input.title}`,
-      "/business-tools/reminders"
+      "/business-tools/reminders",
+      input.dueDate
     );
 
     return { data: reminder };
@@ -252,6 +263,21 @@ export async function toggleReminder(profileId: string, reminderId: string) {
     return { data: updated };
   } catch {
     return { error: "Failed to update reminder" };
+  }
+}
+
+export async function markReminderCompleted(profileId: string, reminderId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const updated = await db.reminder.update({
+      where: { id: reminderId },
+      data: { isCompleted: true },
+    });
+    return { data: updated };
+  } catch {
+    return { error: "Failed to mark reminder as completed" };
   }
 }
 

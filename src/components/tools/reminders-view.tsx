@@ -1,7 +1,7 @@
 // src/components/tools/reminders-view.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { createReminder, deleteReminder, toggleReminder } from "@/lib/actions/dashboard";
+import { createReminder, deleteReminder, toggleReminder, markReminderCompleted } from "@/lib/actions/dashboard";
 import { formatDate, cn } from "@/lib/utils";
 
 interface Reminder {
@@ -53,6 +53,35 @@ export function RemindersView({
     !search || r.title.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Real-time auto-completion check
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const pastDue = upcoming.filter(r => new Date(r.dueDate) <= now);
+      
+      if (pastDue.length > 0) {
+        setUpcoming(prev => prev.filter(r => new Date(r.dueDate) > now));
+        
+        setCompleted(prev => {
+          const newCompleted = pastDue.map(p => ({ ...p, isCompleted: true }));
+          const combined = [...newCompleted, ...prev];
+          
+          // Ensure no duplicates by ID
+          const uniqueMap = new Map();
+          combined.forEach(item => uniqueMap.set(item.id, item));
+          
+          return Array.from(uniqueMap.values()).sort(
+            (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+          );
+        });
+        
+        pastDue.forEach(r => markReminderCompleted(profileId, r.id));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [upcoming, profileId]);
+
   const handleCreate = async () => {
     if (!form.title.trim()) return;
     setLoading(true);
@@ -82,6 +111,35 @@ export function RemindersView({
       setUpcoming((prev) => prev.filter((r) => r.id !== id));
       setCompleted((prev) => prev.filter((r) => r.id !== id));
       toast({ title: "Reminder deleted" });
+    }
+  };
+
+  const handleToggle = async (id: string, isCurrentlyCompleted: boolean) => {
+    const reminderToMove = current.find(r => r.id === id);
+    if (!reminderToMove) return;
+
+    // Optimistic update
+    if (isCurrentlyCompleted) {
+      setCompleted(prev => prev.filter(r => r.id !== id));
+      setUpcoming(prev => [{ ...reminderToMove, isCompleted: false }, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    } else {
+      setUpcoming(prev => prev.filter(r => r.id !== id));
+      setCompleted(prev => [{ ...reminderToMove, isCompleted: true }, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    }
+
+    const res = await toggleReminder(profileId, id);
+    if (res.error) {
+      toast({ variant: "destructive", title: "Error", description: res.error });
+      // Revert if error
+      if (isCurrentlyCompleted) {
+        setUpcoming(prev => prev.filter(r => r.id !== id));
+        setCompleted(prev => [{ ...reminderToMove, isCompleted: true }, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+      } else {
+        setCompleted(prev => prev.filter(r => r.id !== id));
+        setUpcoming(prev => [{ ...reminderToMove, isCompleted: false }, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+      }
+    } else {
+      toast({ title: isCurrentlyCompleted ? "Marked as incomplete" : "Marked as completed" });
     }
   };
 
@@ -175,6 +233,14 @@ export function RemindersView({
                   </td>
                   <td>
                     <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => handleToggle(reminder.id, reminder.isCompleted)}
+                        title={reminder.isCompleted ? "Mark as incomplete" : "Mark as completed"}
+                        className={cn(
+                          "p-1.5 rounded hover:bg-accent transition-colors",
+                          reminder.isCompleted ? "text-emerald-500 hover:text-emerald-600" : "text-muted-foreground hover:text-foreground"
+                        )}>
+                        <CheckSquare className="w-3.5 h-3.5" />
+                      </button>
                       <button className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
