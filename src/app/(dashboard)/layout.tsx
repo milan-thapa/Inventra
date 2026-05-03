@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { hasProfiles } from "@/lib/actions/profile";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
-
+import { CommandPalette } from "@/components/layout/command-palette";
 export default async function DashboardLayout({
   children,
 }: {
@@ -28,6 +28,7 @@ export default async function DashboardLayout({
           {children}
         </main>
       </div>
+      <CommandPalette />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, Receipt, Wallet, Building2,
   BarChart3, Wrench, HelpCircle, BookOpen, Sparkles,
   Settings, CreditCard, Gift, Bell, Image, ChevronDown,
-  ChevronRight, Plus, X, Check,
+  ChevronRight, Plus, Check, Menu, X,
 } from "lucide-react";
 import { cn, getInitials, getAvatarColor } from "@/lib/utils";
 import { useUIStore } from "@/stores/profile-store";
@@ -18,27 +18,27 @@ import { getProfiles, switchProfile } from "@/lib/actions/profile";
 import { APP_NAME } from "@/lib/constants";
 
 const NAV_ITEMS = [
-  { label: "Dashboard",       href: "/dashboard",       icon: LayoutDashboard },
-  { label: "Parties",         href: "/parties",          icon: Users },
-  { label: "Expense",         href: "/expense",          icon: Receipt },
-  { label: "Income",          href: "/income",           icon: Wallet },
-  { label: "Manage Accounts", href: "/manage-account",  icon: Building2 },
-  { label: "Reports",         href: "/reports",          icon: BarChart3 },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Parties", href: "/parties", icon: Users },
+  { label: "Expense", href: "/expense", icon: Receipt },
+  { label: "Income", href: "/income", icon: Wallet },
+  { label: "Manage Accounts", href: "/manage-account", icon: Building2 },
+  { label: "Reports", href: "/reports", icon: BarChart3 },
 ];
 
 const TOOLS_ITEMS = [
-  { label: "Business Cards",  href: "/business-tools/business-cards",  icon: CreditCard },
-  { label: "Greeting Cards",  href: "/business-tools/greeting-cards",  icon: Gift },
-  { label: "Reminders",       href: "/business-tools/reminders",       icon: Bell },
-  { label: "Bill Gallery",    href: "/business-tools/bill-gallery",    icon: Image },
-  { label: "Notebook",        href: "/business-tools/notebook",        icon: BookOpen },
+  { label: "Business Cards", href: "/business-tools/business-cards", icon: CreditCard },
+  { label: "Greeting Cards", href: "/business-tools/greeting-cards", icon: Gift },
+  { label: "Reminders", href: "/business-tools/reminders", icon: Bell },
+  { label: "Bill Gallery", href: "/business-tools/bill-gallery", icon: Image },
+  { label: "Notebook", href: "/business-tools/notebook", icon: BookOpen },
 ];
 
 const BOTTOM_ITEMS = [
-  { label: "Help & Support",  href: "/help-and-supports", icon: HelpCircle },
-  { label: "Tutorials",       href: "/tutorials",          icon: BookOpen },
-  { label: "What's New",      href: "/whats-new",          icon: Sparkles },
-  { label: "Settings",        href: "/settings/general",   icon: Settings },
+  { label: "Help & Support", href: "/help-and-supports", icon: HelpCircle },
+  { label: "Tutorials", href: "/tutorials", icon: BookOpen },
+  { label: "What's New", href: "/whats-new", icon: Sparkles },
+  { label: "Settings", href: "/settings/general", icon: Settings },
 ];
 
 interface Profile {
@@ -51,7 +51,7 @@ interface Profile {
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { sidebarOpen } = useUIStore();
+  const { sidebarOpen, toggleSidebar } = useUIStore();
   const { activeProfileId, profiles, setActiveProfileId, setProfiles } = useProfileStore();
   const [toolsOpen, setToolsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -76,8 +76,7 @@ export function Sidebar() {
     await switchProfile(profileId);
     setActiveProfileId(profileId);
     setProfileMenuOpen(false);
-    // window.location.reload(); // This causes a full page reload, which is slow.
-    router.refresh(); // Use Next.js router to refresh server components
+    router.refresh();
   };
 
   const isActive = (href: string) =>
@@ -96,6 +95,16 @@ export function Sidebar() {
       />
 
       <aside className="sidebar fixed md:relative z-30 md:z-auto flex flex-col h-full overflow-y-auto border-r border-border/50 select-none">
+
+        {/* ── Top bar: Logo only (hamburger lives in header) ── */}
+        <div className="h-14 flex items-center px-4 border-b border-border/50 flex-shrink-0">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-emerald-600 rounded flex items-center justify-center flex-shrink-0">
+              <BarChart3 className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-bold text-sm text-foreground">{APP_NAME}</span>
+          </Link>
+        </div>
 
         {/* ── Profile Switcher ─────────────────────────────── */}
         <div className="p-3 border-b border-border/50">
@@ -238,16 +247,6 @@ export function Sidebar() {
             />
           ))}
         </nav>
-
-        {/* ── Logo at bottom ───────────────────────────────── */}
-        <div className="p-3 border-t border-border/50">
-          <div className="flex items-center gap-2 px-2">
-            <div className="w-5 h-5 bg-emerald-600 rounded flex items-center justify-center">
-              <BarChart3 className="w-3 h-3 text-white" />
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground">{APP_NAME}</span>
-          </div>
-        </div>
       </aside>
     </>
   );
