@@ -105,7 +105,7 @@ export function CommandPalette() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [commandPaletteOpen, selectedIndex, filteredActions, filteredPages, totalResults]);
+  }, [commandPaletteOpen, selectedIndex, filteredActions, filteredPages, totalResults, router, runAction, setCommandPaletteOpen]);
 
   // Reset selection when query changes
   useEffect(() => { setSelectedIndex(0); }, [query]);
@@ -191,7 +191,7 @@ export function CommandPalette() {
               {totalResults === 0 && (
                 <div className="text-center py-10 text-muted-foreground">
                   <Search className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">No results for <span className="text-foreground font-medium">"{query}"</span></p>
+                  <p className="text-sm">No results for <span className="text-foreground font-medium">&quot;{query}&quot;</span></p>
                   <p className="text-xs mt-1 opacity-60">Try searching for pages, tools, or actions</p>
                 </div>
               )}
