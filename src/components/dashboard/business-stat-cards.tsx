@@ -83,7 +83,7 @@ export function BusinessStatCards({ stats }: BusinessStatCardsProps) {
             {card.title}
           </h3>
           <p className={cn("text-xl font-bold", card.color)}>
-            {formatCurrency(card.amount, currency, profile?.currencyPos === "end")}
+            {formatCurrency(card.amount, currency, profile?.currencyPos as any)}
           </p>
         </div>
       ))}

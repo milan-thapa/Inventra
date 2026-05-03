@@ -19,10 +19,10 @@ export default async function PartiesPage() {
 
   const parties = partiesRes.data?.map(party => ({
     ...party,
-    openingBalance: party.openingBalance.toNumber(),
+    openingBalance: Number(party.openingBalance),
     partyTransactions: party.partyTransactions.map(tx => ({
       ...tx,
-      amount: tx.amount.toNumber(),
+      amount: Number(tx.amount),
     })),
   })) ?? [];
 

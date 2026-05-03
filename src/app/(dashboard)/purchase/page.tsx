@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, ShoppingCart, Search, Filter, FileText, Download, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,18 +37,18 @@ export default function PurchasePage() {
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (activeProfileId) {
-      loadPurchases();
-    }
-  }, [activeProfileId]);
-
-  const loadPurchases = async () => {
+  const loadPurchases = useCallback(async () => {
     setLoading(true);
     const res = await getPurchases(activeProfileId!);
     if (res.data) setPurchases(res.data);
     setLoading(false);
-  };
+  }, [activeProfileId]);
+
+  useEffect(() => {
+    if (activeProfileId) {
+      loadPurchases();
+    }
+  }, [activeProfileId, loadPurchases]);
 
   const handleDelete = async () => {
     if (!activeProfileId || !deleteId) return;
@@ -156,7 +156,7 @@ export default function PurchasePage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-semibold text-blue-600">
-                    {formatCurrency(purchase.grandTotal, profile?.currency, profile?.currencyPos === "end")}
+                    {formatCurrency(purchase.grandTotal, profile?.currency, profile?.currencyPos as any)}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <DropdownMenu>
@@ -180,7 +180,7 @@ export default function PurchasePage() {
               {filteredPurchases.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
-                    No purchase bills found matching "{search}"
+                    No purchase bills found matching &quot;{search}&quot;
                   </td>
                 </tr>
               )}

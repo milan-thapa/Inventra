@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Package, Search, Filter, Download, Upload, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,18 +36,18 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (activeProfileId) {
-      loadItems();
-    }
-  }, [activeProfileId]);
-
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setLoading(true);
     const res = await getItems(activeProfileId!);
     if (res.data) setItems(res.data);
     setLoading(false);
-  };
+  }, [activeProfileId]);
+
+  useEffect(() => {
+    if (activeProfileId) {
+      loadItems();
+    }
+  }, [activeProfileId, loadItems]);
 
   const handleDelete = async () => {
     if (!activeProfileId || !deleteId) return;
@@ -80,7 +80,7 @@ export default function InventoryPage() {
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background" />
             </div>
         </div>
-        <h2 className="text-2xl font-bold mb-2">Let's add your First Item</h2>
+        <h2 className="text-2xl font-bold mb-2">Let&apos;s add your First Item</h2>
         <p className="text-muted-foreground max-w-md mb-8">
           Click on the add new item button and start managing your items
         </p>
@@ -159,8 +159,8 @@ export default function InventoryPage() {
                       <span className="opacity-70 ml-0.5">{item.unit || "Units"}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right">{formatCurrency(item.purchasePrice, profile?.currency, profile?.currencyPos === "end")}</td>
-                  <td className="px-6 py-4 text-right">{formatCurrency(item.sellingPrice, profile?.currency, profile?.currencyPos === "end")}</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(item.purchasePrice, profile?.currency, profile?.currencyPos as any)}</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(item.sellingPrice, profile?.currency, profile?.currencyPos as any)}</td>
                   <td className="px-6 py-4 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -188,7 +188,7 @@ export default function InventoryPage() {
               {filteredItems.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
-                    No items found matching "{search}"
+                    No items found matching &quot;{search}&quot;
                   </td>
                 </tr>
               )}

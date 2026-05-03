@@ -66,7 +66,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <StatCards stats={stats} />
+      <StatCards stats={stats as any} />
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">

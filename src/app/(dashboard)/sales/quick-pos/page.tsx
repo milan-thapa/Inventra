@@ -110,11 +110,11 @@ export default function QuickPOSPage() {
     const res = await createSale(activeProfileId!, saleData);
     setLoading(false);
 
-    if (res.error) {
-      toast.error(res.error);
+    if (res.error || !res.data) {
+      toast.error(res.error || "Failed to complete sale");
     } else {
       toast.success(`POS Sale Completed! Invoice #${res.data.invoiceNo}`, {
-        description: `Total Amount: ${formatCurrency(total, profile?.currency)}`,
+        description: `Total Amount: ${formatCurrency(total, profile?.currency, profile?.currencyPos as any)}`,
         icon: <Sparkles className="w-4 h-4 text-emerald-500" />
       });
       setCart([]);
@@ -227,7 +227,7 @@ export default function QuickPOSPage() {
                       <p className="text-[10px] text-muted-foreground mb-3 font-mono">{item.sku || "N/A"}</p>
                       <div className="mt-auto flex items-center justify-between pt-2 border-t border-border/30">
                         <span className="text-sm font-black text-foreground">
-                            {formatCurrency(item.sellingPrice, profile?.currency, profile?.currencyPos === "end")}
+                            {formatCurrency(item.sellingPrice, profile?.currency, profile?.currencyPos as any)}
                         </span>
                         <div className="h-6 w-6 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all">
                             <Plus className="w-3 h-3" />
@@ -333,7 +333,7 @@ export default function QuickPOSPage() {
             <div className="p-5 bg-secondary/30 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center gap-1">
                 <span className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.2em]">Total Payable Amount</span>
                 <span className="text-4xl font-black text-emerald-600 font-mono tracking-tighter">
-                    {formatCurrency(total, profile?.currency, profile?.currencyPos === "end")}
+                    {formatCurrency(total, profile?.currency, profile?.currencyPos as any)}
                 </span>
             </div>
 
