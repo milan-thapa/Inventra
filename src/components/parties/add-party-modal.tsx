@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, Camera, Loader2 } from "lucide-react";
+import { X, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,26 @@ import { createPartySchema, type CreatePartyInput } from "@/lib/validations/part
 import { cn } from "@/lib/utils";
 import { UploadButton } from "@/lib/uploadthing";
 import Image from "next/image";
-import { OurFileRouter } from "@/app/api/uploadthing/core";
 
 type Tab = "credit" | "additional";
+
+interface CreatedParty {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  openingBalance: number | string;
+  balanceType: string;
+  partyTransactions: Array<{
+    id: string;
+    type: string;
+    amount: number | string;
+    date: Date | string;
+    remarks: string | null;
+    receiptNumber: number;
+    paymentMethod: string;
+  }>;
+}
 
 export function AddPartyModal({
   open,
@@ -28,7 +45,7 @@ export function AddPartyModal({
   open: boolean;
   onClose: () => void;
   profileId: string;
-  onSuccess?: (party: any) => void;
+  onSuccess?: (party: CreatedParty) => void;
 }) {
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("additional");
@@ -54,9 +71,13 @@ export function AddPartyModal({
 
     if (res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
-    } else {
+    } else if (res.data) {
       toast({ title: "Party saved successfully" });
-      onSuccess?.(res.data);
+      onSuccess?.({
+        ...res.data,
+        openingBalance: Number(res.data.openingBalance),
+        partyTransactions: [],
+      });
     }
   };
 
@@ -89,13 +110,13 @@ export function AddPartyModal({
                   {/* Photo upload */}
                   <div className="w-16 h-16 rounded-full bg-muted/50 border-2 border-dashed border-border flex flex-col items-center justify-center hover:border-emerald-500 transition-colors flex-shrink-0 relative">
                     {photoUrl ? (
-                                        <Image
-                    src={photoUrl}
-                    alt="Party photo"
-                    width={80}
-                    height={80}
-                    className="rounded-full object-cover"
-                  />
+                      <Image
+                        src={photoUrl}
+                        alt="Party photo"
+                        width={80}
+                        height={80}
+                        className="rounded-full object-cover"
+                      />
                     ) : (
                       <UploadButton
                         endpoint="partyPhoto"
@@ -126,16 +147,20 @@ export function AddPartyModal({
                       <Label className="text-xs text-muted-foreground mb-1.5 block">
                         Full Name <span className="text-rose-400">*</span>
                       </Label>
-                      <Input placeholder="Enter the name of party"
+                      <Input
+                        placeholder="Enter the name of party"
                         {...register("name")}
-                        className="h-9 text-sm bg-muted/50 border-border/50" />
+                        className="h-9 text-sm bg-muted/50 border-border/50"
+                      />
                       {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground mb-1.5 block">Phone Number</Label>
-                      <Input placeholder="Enter party phone no"
+                      <Input
+                        placeholder="Enter party phone no"
                         {...register("phone")}
-                        className="h-9 text-sm bg-muted/50 border-border/50" />
+                        className="h-9 text-sm bg-muted/50 border-border/50"
+                      />
                     </div>
                   </div>
                 </div>
@@ -164,35 +189,46 @@ export function AddPartyModal({
                         <Label className="text-xs text-muted-foreground mb-1.5 block">Opening Balance</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">Rs.</span>
-                          <Input type="number" placeholder="eg. 0"
+                          <Input
+                            type="number"
+                            placeholder="eg. 0"
                             {...register("openingBalance", { valueAsNumber: true })}
-                            className="h-9 text-sm bg-muted/50 border-border/50 pl-10" />
+                            className="h-9 text-sm bg-muted/50 border-border/50 pl-10"
+                          />
                         </div>
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground mb-1.5 block">As of Date</Label>
-                        <Input type="date"
+                        <Input
+                          type="date"
                           defaultValue={new Date().toISOString().split("T")[0]}
                           {...register("openingDate", { valueAsDate: true })}
-                          className="h-9 text-sm bg-muted/50 border-border/50" />
+                          className="h-9 text-sm bg-muted/50 border-border/50"
+                        />
                       </div>
                     </div>
                     {/* Balance type toggle */}
                     <div className="flex gap-2">
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => setValue("balanceType", "TO_RECEIVE")}
-                        className={cn("px-4 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
+                        className={cn(
+                          "px-4 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
                           balanceType === "TO_RECEIVE"
                             ? "border-emerald-500 bg-emerald-500/10 text-emerald-500"
-                            : "border-border/50 text-muted-foreground hover:border-emerald-500/50")}>
+                            : "border-border/50 text-muted-foreground hover:border-emerald-500/50"
+                        )}>
                         To Receive
                       </button>
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => setValue("balanceType", "TO_GIVE")}
-                        className={cn("px-4 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
+                        className={cn(
+                          "px-4 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
                           balanceType === "TO_GIVE"
                             ? "border-rose-500 bg-rose-500/10 text-rose-500"
-                            : "border-border/50 text-muted-foreground hover:border-rose-500/50")}>
+                            : "border-border/50 text-muted-foreground hover:border-rose-500/50"
+                        )}>
                         To Give
                       </button>
                     </div>
@@ -205,30 +241,40 @@ export function AddPartyModal({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs text-muted-foreground mb-1.5 block">Address</Label>
-                        <Input placeholder="Enter party's address"
+                        <Input
+                          placeholder="Enter party's address"
                           {...register("address")}
-                          className="h-9 text-sm bg-muted/50 border-border/50" />
+                          className="h-9 text-sm bg-muted/50 border-border/50"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground mb-1.5 block">Email</Label>
-                        <Input type="email" placeholder="Enter party's email"
+                        <Input
+                          type="email"
+                          placeholder="Enter party's email"
                           {...register("email")}
-                          className="h-9 text-sm bg-muted/50 border-border/50" />
+                          className="h-9 text-sm bg-muted/50 border-border/50"
+                        />
                       </div>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground mb-1.5 block">PAN Number</Label>
-                      <Input placeholder="Enter number"
+                      <Input
+                        placeholder="Enter number"
                         {...register("panNumber")}
-                        className="h-9 text-sm bg-muted/50 border-border/50" />
+                        className="h-9 text-sm bg-muted/50 border-border/50"
+                      />
                     </div>
                   </div>
                 )}
 
                 {/* Footer */}
                 <div className="flex justify-end mt-5">
-                  <Button type="submit" disabled={loading}
-                    className="px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                  >
                     {loading && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
                     Save Party
                   </Button>

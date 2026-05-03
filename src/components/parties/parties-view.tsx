@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Filter, Users } from "lucide-react";
+import { Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PartyCard } from "@/components/parties/party-card";
@@ -11,9 +11,18 @@ import { AddPartyModal } from "@/components/parties/add-party-modal";
 import { AddPaymentInModal } from "@/components/parties/add-payment-in-modal";
 import { AddPaymentOutModal } from "@/components/parties/add-payment-out-modal";
 import { EmptyState } from "@/components/shared/empty-state";
-import { cn } from "@/lib/utils";
 
 type BalanceFilter = "ALL" | "TO_RECEIVE" | "TO_GIVE" | "SETTLED";
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number | string;
+  date: Date | string;
+  remarks: string | null;
+  receiptNumber: number;
+  paymentMethod: string;
+}
 
 interface Party {
   id: string;
@@ -22,22 +31,14 @@ interface Party {
   address: string | null;
   openingBalance: number | string;
   balanceType: string;
-  partyTransactions: Array<{
-    id: string;
-    type: string;
-    amount: number | string;
-    date: Date | string;
-    remarks: string | null;
-    receiptNumber: number;
-    paymentMethod: string;
-  }>;
+  partyTransactions: Transaction[];
 }
 
 const FILTERS: { value: BalanceFilter; label: string }[] = [
-  { value: "ALL",        label: "All Payment" },
+  { value: "ALL", label: "All Payment" },
   { value: "TO_RECEIVE", label: "To Receive" },
-  { value: "TO_GIVE",    label: "To Give" },
-  { value: "SETTLED",    label: "Settled" },
+  { value: "TO_GIVE", label: "To Give" },
+  { value: "SETTLED", label: "Settled" },
 ];
 
 export function PartiesView({
@@ -47,15 +48,15 @@ export function PartiesView({
   initialParties: Party[];
   profileId: string;
 }) {
-  const [parties, setParties]             = useState(initialParties);
-  const [selectedPartyId, setSelected]    = useState<string | null>(
+  const [parties, setParties] = useState(initialParties);
+  const [selectedPartyId, setSelected] = useState<string | null>(
     initialParties[0]?.id ?? null
   );
-  const [filter, setFilter]               = useState<BalanceFilter>("ALL");
-  const [search, setSearch]               = useState("");
-  const [addPartyOpen, setAddPartyOpen]   = useState(false);
-  const [payInOpen, setPayInOpen]         = useState(false);
-  const [payOutOpen, setPayOutOpen]       = useState(false);
+  const [filter, setFilter] = useState<BalanceFilter>("ALL");
+  const [search, setSearch] = useState("");
+  const [addPartyOpen, setAddPartyOpen] = useState(false);
+  const [payInOpen, setPayInOpen] = useState(false);
+  const [payOutOpen, setPayOutOpen] = useState(false);
 
   const filtered = parties.filter((p) => {
     const matchSearch =
@@ -75,8 +76,20 @@ export function PartiesView({
     setAddPartyOpen(false);
   };
 
+  const handlePartyDeleted = (partyId: string) => {
+    setParties((prev) => prev.filter((p) => p.id !== partyId));
+    setSelected((prev) => {
+      if (prev !== partyId) return prev;
+      const remaining = parties.filter((p) => p.id !== partyId);
+      return remaining[0]?.id ?? null;
+    });
+  };
+
+  const handlePartyUpdated = (updated: Party) => {
+    setParties((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+  };
+
   const handlePaymentAdded = () => {
-    // Refresh page data
     window.location.reload();
   };
 
@@ -111,7 +124,7 @@ export function PartiesView({
           </div>
         </div>
 
-        {/* Filter dropdown */}
+        {/* Filter */}
         <div className="px-3 py-2 border-b border-border/50">
           <select
             value={filter}
@@ -130,9 +143,7 @@ export function PartiesView({
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
               <Users className="w-10 h-10 text-muted-foreground/30 mb-2" />
               <p className="text-sm font-medium text-foreground mb-1">
-                {parties.length === 0
-                  ? "Let's add your First Party"
-                  : "No parties found"}
+                {parties.length === 0 ? "Let's add your First Party" : "No parties found"}
               </p>
               <p className="text-xs text-muted-foreground mb-3">
                 {parties.length === 0
@@ -170,6 +181,8 @@ export function PartiesView({
             profileId={profileId}
             onPaymentIn={() => setPayInOpen(true)}
             onPaymentOut={() => setPayOutOpen(true)}
+            onPartyDeleted={handlePartyDeleted}
+            onPartyUpdated={handlePartyUpdated}
           />
         ) : (
           <div className="h-full flex items-center justify-center bg-card rounded-xl border border-border/50">
