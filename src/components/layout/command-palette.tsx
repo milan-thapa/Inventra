@@ -67,6 +67,16 @@ export function CommandPalette() {
 
   const totalResults = filteredPages.length + filteredActions.length;
 
+  const runAction = useCallback((action: string) => {
+    setCommandPaletteOpen(false);
+    switch (action) {
+      case "payment-in": setAddPaymentInOpen(true); break;
+      case "payment-out": setAddPaymentOutOpen(true); break;
+      case "expense": setAddExpenseOpen(true); break;
+      case "party": router.push("/parties"); break;
+    }
+  }, [setCommandPaletteOpen, setAddPaymentInOpen, setAddPaymentOutOpen, setAddExpenseOpen, router]);
+
   // ── Keyboard shortcut to open/close ─────────────────────────────
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -117,16 +127,6 @@ export function CommandPalette() {
       setQuery("");
     }
   }, [commandPaletteOpen]);
-
-  const runAction = useCallback((action: string) => {
-    setCommandPaletteOpen(false);
-    switch (action) {
-      case "payment-in": setAddPaymentInOpen(true); break;
-      case "payment-out": setAddPaymentOutOpen(true); break;
-      case "expense": setAddExpenseOpen(true); break;
-      case "party": router.push("/parties"); break;
-    }
-  }, [setCommandPaletteOpen, setAddPaymentInOpen, setAddPaymentOutOpen, setAddExpenseOpen, router]);
 
   // Group filtered pages by group name
   const pageGroups = filteredPages.reduce<Record<string, typeof filteredPages>>((acc, page) => {
