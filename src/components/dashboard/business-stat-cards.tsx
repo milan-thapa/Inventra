@@ -1,6 +1,7 @@
 "use client";
 
-import { TrendingUp, TrendingDown, Users, Package, Wallet, CreditCard, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { TrendingUp, TrendingDown, Wallet, CreditCard, Package } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useProfileStore } from "@/stores/profile-store";
 
@@ -67,25 +68,34 @@ export function BusinessStatCards({ stats }: BusinessStatCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {cards.map((card, i) => (
-        <div
+        <motion.div
           key={i}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ delay: i * 0.05, type: "spring", stiffness: 300, damping: 20 }}
           className={cn(
-            "rounded-xl p-5 border border-border/50",
-            card.bg
+            "rounded-xl p-5 border border-border/50 relative overflow-hidden group transition-all duration-300",
+            card.bg,
+            "hover:shadow-lg hover:shadow-black/5 hover:border-border"
           )}
         >
-          <div className="flex justify-between items-start mb-2">
-            <div className={cn("p-2 rounded-lg", card.iconBg)}>
+          {/* Subtle light streak on hover */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          
+          <div className="flex justify-between items-start mb-3 relative z-10">
+            <div className={cn("p-2.5 rounded-xl transition-transform group-hover:scale-110", card.iconBg)}>
               <card.icon className={cn("w-5 h-5", card.color)} />
             </div>
           </div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1 relative z-10">
             {card.title}
           </h3>
-          <p className={cn("text-xl font-bold", card.color)}>
+          <p className={cn("text-2xl font-bold tracking-tight relative z-10", card.color)}>
             {formatCurrency(card.amount, currency, profile?.currencyPos as any)}
           </p>
-        </div>
+        </motion.div>
       ))}
     </div>
   );

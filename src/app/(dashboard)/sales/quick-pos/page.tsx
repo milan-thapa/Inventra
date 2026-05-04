@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Plus, Minus, Trash2, Search, ShoppingCart, 
   CreditCard, Banknote, Package, Sparkles, X, 
-  ChevronRight, Calculator, History, Settings
+  ChevronRight, Calculator, History, Settings, ShoppingBag
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -122,43 +122,34 @@ export default function QuickPOSPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
-      {/* ── TOP TERMINAL BAR ──────────────────────────────── */}
-      <div className="h-16 border-b bg-card px-6 flex items-center justify-between shadow-sm z-10">
-        <div className="flex items-center gap-6">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold tracking-tight">INVENTRA <span className="text-emerald-500 text-xs font-mono ml-2 border border-emerald-500/30 px-1.5 py-0.5 rounded">v2.0 POS</span></h1>
-            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-widest">{profile?.name || "Terminal 01"}</p>
-          </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-4">
-            <div className="flex flex-col items-end px-4 py-1 border-x border-border/50">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold">Session Time</span>
-                <span className="text-xs font-mono">00:42:15</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9"><History className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9"><Calculator className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9"><Settings className="w-4 h-4" /></Button>
-            </div>
-        </div>
-      </div>
-
-      <div className="flex-1 flex overflow-hidden bg-secondary/20">
+    <div className="h-[calc(100vh-140px)] flex flex-col overflow-hidden -m-4 md:-m-6">
+      <div className="flex-1 flex overflow-hidden bg-secondary/5">
         {/* ── LEFT: PRODUCT GRID ────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Category & Search Header */}
-          <div className="p-4 flex flex-col gap-4 bg-background/50 backdrop-blur-md border-b">
+          {/* Terminal Info & Search */}
+          <div className="px-6 py-4 flex flex-col gap-4 bg-background border-b shadow-sm relative z-10">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                        <ShoppingBag className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                        <h2 className="text-sm font-bold">Quick POS Terminal</h2>
+                        <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">Active Session: {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest border-border/50">
+                        <History className="w-3.5 h-3.5 mr-1.5" /> History
+                    </Button>
+                </div>
+            </div>
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
               <Input 
                 ref={searchInputRef}
-                placeholder="Search products or scan barcode (F1)..." 
-                className="pl-12 h-14 text-lg bg-background border-2 border-border/50 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 rounded-2xl shadow-sm transition-all"
+                placeholder="Search products or scan (F1)..." 
+                className="pl-12 h-12 text-base bg-secondary/30 border-none focus-visible:ring-emerald-500 rounded-xl transition-all"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoFocus
@@ -195,41 +186,33 @@ export default function QuickPOSPage() {
                 {filteredItems.map(item => (
                   <motion.button
                     layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     key={item.id}
                     onClick={() => addToCart(item)}
                     disabled={item.stockQuantity <= 0}
                     className={cn(
-                        "group relative flex flex-col bg-card border-2 border-border/50 rounded-2xl overflow-hidden hover:border-emerald-500 transition-all text-left shadow-sm",
+                        "group relative flex flex-col bg-card border border-border/50 rounded-xl overflow-hidden hover:border-emerald-500/50 hover:shadow-xl hover:shadow-black/5 transition-all text-left",
                         item.stockQuantity <= 0 && "opacity-60 grayscale cursor-not-allowed"
                     )}
                   >
-                    <div className="aspect-square bg-secondary/30 flex items-center justify-center p-6 relative">
+                    <div className="aspect-[4/3] bg-secondary/20 flex items-center justify-center relative overflow-hidden">
                         <Package className={cn(
-                            "w-10 h-10 transition-transform duration-500 group-hover:scale-125 group-hover:rotate-12",
-                            item.stockQuantity > 0 ? "text-emerald-500/40" : "text-muted-foreground/40"
+                            "w-8 h-8 transition-transform duration-500 group-hover:scale-110",
+                            item.stockQuantity > 0 ? "text-emerald-500/30" : "text-muted-foreground/30"
                         )} />
-                        {item.stockQuantity <= 5 && item.stockQuantity > 0 && (
-                            <div className="absolute top-2 right-2 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">
-                                Low Stock
-                            </div>
-                        )}
-                        {item.stockQuantity <= 0 && (
-                             <div className="absolute inset-0 flex items-center justify-center bg-black/5">
-                                <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-lg">Sold Out</span>
-                             </div>
-                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <div className="p-3 flex flex-col flex-1">
-                      <h4 className="font-bold text-sm leading-tight mb-1 group-hover:text-emerald-600 transition-colors">{item.name}</h4>
-                      <p className="text-[10px] text-muted-foreground mb-3 font-mono">{item.sku || "N/A"}</p>
-                      <div className="mt-auto flex items-center justify-between pt-2 border-t border-border/30">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-xs leading-tight group-hover:text-emerald-600 transition-colors line-clamp-2">{item.name}</h4>
+                      </div>
+                      <div className="mt-auto flex items-center justify-between pt-2">
                         <span className="text-sm font-black text-foreground">
-                            {formatCurrency(item.sellingPrice, profile?.currency, profile?.currencyPos as any)}
+                            {formatCurrency(item.sellingPrice, profile?.currency)}
                         </span>
-                        <div className="h-6 w-6 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                        <div className="h-6 w-6 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all">
                             <Plus className="w-3 h-3" />
                         </div>
                       </div>
@@ -242,19 +225,19 @@ export default function QuickPOSPage() {
         </div>
 
         {/* ── RIGHT: RECEIPT PANEL ─────────────────────────── */}
-        <div className="w-[400px] bg-card border-l flex flex-col shadow-2xl relative z-20">
-          <div className="p-6 border-b flex items-center justify-between bg-emerald-600 text-white">
+        <div className="w-[380px] bg-card border-l flex flex-col shadow-xl relative z-20">
+          <div className="p-5 border-b flex items-center justify-between bg-card">
             <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-md">
-                <ShoppingCart className="w-5 h-5" />
+              <div className="bg-emerald-500/10 p-2 rounded-lg">
+                <ShoppingCart className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <h2 className="font-black text-sm uppercase tracking-tighter">Shopping Cart</h2>
-                <p className="text-[10px] opacity-70 font-bold uppercase">{cart.length} Products Added</p>
+                <h2 className="font-bold text-sm">Order Summary</h2>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{cart.length} items</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 rounded-full" onClick={() => setCart([])}>
-                <Trash2 className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-rose-500 rounded-full" onClick={() => setCart([])}>
+                <Trash2 className="w-4 h-4" />
             </Button>
           </div>
 
@@ -263,45 +246,45 @@ export default function QuickPOSPage() {
               {cart.map((item) => (
                 <motion.div 
                   layout
-                  initial={{ x: 20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -20, opacity: 0 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
                   key={item.id} 
-                  className="flex flex-col bg-background border-2 border-border/50 rounded-2xl p-4 shadow-sm hover:border-emerald-500/30 transition-all"
+                  className="flex flex-col bg-background border border-border/50 rounded-xl p-3 shadow-sm hover:border-emerald-500/20 transition-all"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h4 className="text-sm font-bold leading-tight">{item.name}</h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(item.sellingPrice, profile?.currency)} per unit</p>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 pr-2">
+                      <h4 className="text-xs font-bold leading-tight line-clamp-1">{item.name}</h4>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{formatCurrency(item.sellingPrice, profile?.currency)}</p>
                     </div>
-                    <span className="font-bold text-emerald-600 text-sm">
+                    <span className="font-bold text-foreground text-xs">
                         {formatCurrency(item.quantity * Number(item.sellingPrice), profile?.currency)}
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 p-1 bg-secondary/50 rounded-xl">
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center gap-0.5 p-0.5 bg-secondary/50 rounded-lg">
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm" 
+                            className="h-6 w-6 rounded-md hover:bg-white" 
                             onClick={() => updateQuantity(item.id, -1)}
                         >
-                            <Minus className="w-3.5 h-3.5" />
+                            <Minus className="w-2.5 h-2.5" />
                         </Button>
-                        <span className="w-8 text-center text-xs font-black">{item.quantity}</span>
+                        <span className="w-6 text-center text-[10px] font-black">{item.quantity}</span>
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm" 
+                            className="h-6 w-6 rounded-md hover:bg-white" 
                             onClick={() => updateQuantity(item.id, 1)}
                         >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="w-2.5 h-2.5" />
                         </Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50 rounded-lg" onClick={() => removeFromCart(item.id)}>
-                        <X className="w-4 h-4" />
-                    </Button>
+                    <button onClick={() => removeFromCart(item.id)} className="text-[10px] font-bold text-rose-500 hover:underline">
+                        Remove
+                    </button>
                   </div>
                 </motion.div>
               ))}

@@ -170,9 +170,55 @@
   }
 }
 
-/* ── Print styles ──────────────────────────────────────── */
+/* ── Print Styles ────────────────────────────────────────── */
 @media print {
-  .no-print { display: none !important; }
-  body { background: white !important; color: black !important; }
-  .print-only { display: block !important; }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print, 
+  nav, 
+  header, 
+  aside,
+  button,
+  .command-palette {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .bg-card,
+  .bg-muted,
+  .bg-emerald-500\/10,
+  .bg-rose-500\/10 {
+    background: transparent !important;
+    border: 1px solid #eee !important;
+  }
+
+  .text-emerald-400, .text-emerald-500 { color: #059669 !important; }
+  .text-rose-400, .text-rose-500 { color: #dc2626 !important; }
+  .text-muted-foreground { color: #666 !important; }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border-bottom: 1px solid #eee !important;
+    padding: 8px !important;
+    color: black !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+}
+
+.print-only {
+  display: none;
 }

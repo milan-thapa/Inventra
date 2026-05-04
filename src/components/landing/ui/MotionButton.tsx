@@ -30,12 +30,12 @@ export const MotionButton = React.forwardRef<HTMLButtonElement, MotionButtonProp
       <motion.button
         ref={ref}
         whileHover={{ 
-          scale: 1.02,
-          boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
+          y: -2,
+          transition: { duration: 0.2 }
         }}
         whileTap={{ scale: 0.98 }}
         className={cn(
-          "relative overflow-hidden inline-flex items-center justify-center rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2",
+          "relative overflow-hidden inline-flex items-center justify-center rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-brand-500/20",
           variants[variant],
           sizes[size],
           className

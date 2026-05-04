@@ -59,89 +59,122 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1117] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-            <BarChart3 className="w-5 h-5 text-white" />
+    <div className="min-h-screen bg-[#0f172a] relative overflow-hidden flex items-center justify-center p-4">
+      {/* Background patterns */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-600 rounded-full blur-[120px] opacity-10" />
+        <div className="absolute bottom-[10%] left-[-10%] w-[400px] h-[400px] bg-blue-600 rounded-full blur-[120px] opacity-10" />
+      </div>
+
+      <div className="w-full max-w-lg relative z-10">
+        {/* Progress bar */}
+        <div className="mb-10">
+          <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3 px-1">
+            <span>Step {step} of 2</span>
+            <span>{step === 1 ? "Profile Type" : "Business Info"}</span>
           </div>
-          <span className="text-xl font-bold text-white">{APP_NAME}</span>
+          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <motion.div 
+              initial={{ width: "0%" }}
+              animate={{ width: step === 1 ? "50%" : "100%" }}
+              className="h-full bg-brand-600 shadow-[0_0_10px_rgba(22,163,74,0.4)]"
+            />
+          </div>
         </div>
 
-        <div className="bg-[#1a1f2e] rounded-2xl border border-[#2a3142] p-6 shadow-2xl">
+        {/* Logo */}
+        <div className="flex flex-col items-center justify-center gap-4 mb-10">
+          <div className="w-14 h-14 bg-brand-600 rounded-[1.25rem] flex items-center justify-center shadow-2xl shadow-brand-600/20 rotate-3">
+            <BarChart3 className="w-8 h-8 text-white -rotate-3" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white tracking-tight">Let&apos;s personalize your experience</h1>
+            <p className="text-sm text-white/40">Tell us a bit about how you&apos;ll use {APP_NAME}</p>
+          </div>
+        </div>
+
+        <div className="bg-[#1e293b]/50 backdrop-blur-xl rounded-[2rem] border border-white/10 p-8 shadow-2xl">
           <AnimatePresence mode="wait">
             {/* Step 1: Choose profile type */}
             {step === 1 && (
               <motion.div
                 key="step1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="space-y-6"
               >
-                <h2 className="text-lg font-bold text-white mb-1">Create New Profile</h2>
-                <p className="text-sm text-gray-400 mb-5">Select profile which you want to create</p>
-
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {/* Business Management */}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setProfileType("BUSINESS")}
-                    className={`w-full flex items-start gap-3 p-4 rounded-xl border-2 transition-all ${
+                    className={`w-full flex items-start gap-4 p-5 rounded-2xl border-2 transition-all relative overflow-hidden group ${
                       profileType === "BUSINESS"
-                        ? "border-emerald-500 bg-emerald-500/10"
-                        : "border-[#2a3142] hover:border-[#3a4152]"
+                        ? "border-brand-600 bg-brand-600/10 shadow-lg shadow-brand-600/10"
+                        : "border-white/5 bg-white/5 hover:border-white/10"
                     }`}
                   >
-                    <div className="w-10 h-10 bg-emerald-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Building2 className="w-5 h-5 text-emerald-500" />
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
+                      profileType === "BUSINESS" ? "bg-brand-600 text-white" : "bg-white/10 text-white/40 group-hover:text-white/60"
+                    )}>
+                      <Building2 className="w-6 h-6" />
                     </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-white text-sm">Business Management</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Manage your business accounting and inventory easily
+                    <div className="text-left flex-1">
+                      <p className="font-bold text-white text-base">Business Management</p>
+                      <p className="text-xs text-white/40 mt-1 leading-relaxed">
+                        Manage your business accounting, inventory, and sales in one place.
                       </p>
                     </div>
-                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${
-                      profileType === "BUSINESS"
-                        ? "border-emerald-500 bg-emerald-500"
-                        : "border-gray-600"
-                    }`} />
-                  </button>
+                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-1 transition-all flex items-center justify-center ${
+                      profileType === "BUSINESS" ? "border-brand-600" : "border-white/20"
+                    }`}>
+                      {profileType === "BUSINESS" && <div className="w-2.5 h-2.5 bg-brand-600 rounded-full" />}
+                    </div>
+                  </motion.button>
 
                   {/* Personal Finance */}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setProfileType("PERSONAL")}
-                    className={`w-full flex items-start gap-3 p-4 rounded-xl border-2 transition-all ${
+                    className={`w-full flex items-start gap-4 p-5 rounded-2xl border-2 transition-all relative overflow-hidden group ${
                       profileType === "PERSONAL"
-                        ? "border-emerald-500 bg-emerald-500/10"
-                        : "border-[#2a3142] hover:border-[#3a4152]"
+                        ? "border-blue-600 bg-blue-600/10 shadow-lg shadow-blue-600/10"
+                        : "border-white/5 bg-white/5 hover:border-white/10"
                     }`}
                   >
-                    <div className="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-blue-400" />
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
+                      profileType === "PERSONAL" ? "bg-blue-600 text-white" : "bg-white/10 text-white/40 group-hover:text-white/60"
+                    )}>
+                      <User className="w-6 h-6" />
                     </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-white text-sm">Personal Finance</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Track your expenses and maintain your credits with friends
+                    <div className="text-left flex-1">
+                      <p className="font-bold text-white text-base">Personal Finance</p>
+                      <p className="text-xs text-white/40 mt-1 leading-relaxed">
+                        Track your daily expenses, maintain credits, and manage your budget.
                       </p>
                     </div>
-                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${
-                      profileType === "PERSONAL"
-                        ? "border-emerald-500 bg-emerald-500"
-                        : "border-gray-600"
-                    }`} />
-                  </button>
+                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-1 transition-all flex items-center justify-center ${
+                      profileType === "PERSONAL" ? "border-blue-600" : "border-white/20"
+                    }`}>
+                      {profileType === "PERSONAL" && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                    </div>
+                  </motion.button>
                 </div>
 
                 <Button
-                  className="w-full mt-5 bg-emerald-600 hover:bg-emerald-700 text-white h-11 font-semibold"
+                  className="w-full h-12 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-600/20 active:scale-[0.98] transition-all gap-2"
                   onClick={handleContinue}
                   disabled={loading}
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  {profileType === "PERSONAL" ? "Create Personal Profile" : "Continue"}
-                  {profileType === "BUSINESS" && !loading && <ChevronRight className="w-4 h-4 ml-1" />}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  <span>{profileType === "PERSONAL" ? "Create Personal Profile" : "Continue"}</span>
+                  {!loading && <ChevronRight className="w-4 h-4" />}
                 </Button>
               </motion.div>
             )}
@@ -150,66 +183,67 @@ export default function OnboardingPage() {
             {step === 2 && (
               <motion.div
                 key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="space-y-6"
               >
-                <h2 className="text-lg font-bold text-white mb-1">Add Your Business Details</h2>
-                <p className="text-sm text-gray-400 mb-5">Let&apos;s fill up your business information</p>
-
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Business Name */}
-                  <div>
-                    <Label className="text-gray-300 text-sm mb-1.5 block">
-                      Business Name <span className="text-rose-400">*</span>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 block">
+                      Business Name <span className="text-rose-500">*</span>
                     </Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <div className="relative group">
+                      <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-brand-500 transition-colors" />
                       <Input
-                        placeholder="Enter your business name"
+                        placeholder="e.g. Acme Corporation"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
-                        className="pl-9 bg-[#252c3e] border-[#353d52] text-white placeholder:text-gray-500 focus:border-emerald-500"
+                        className="h-12 pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/20 rounded-xl focus:border-brand-500 focus:ring-brand-500/20 transition-all"
                       />
                     </div>
                   </div>
 
                   {/* Business Category */}
-                  <div>
-                    <Label className="text-gray-300 text-sm mb-1.5 block">Business Category</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none z-10" />
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 block">Business Category</Label>
+                    <div className="relative group">
+                      <BarChart3 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-brand-500 transition-colors pointer-events-none z-10" />
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-[#252c3e] border border-[#353d52] text-white rounded-md text-sm appearance-none focus:border-emerald-500 outline-none"
+                        className="w-full h-12 pl-11 pr-4 bg-white/5 border border-white/10 text-white rounded-xl text-sm appearance-none focus:border-brand-500 focus:ring-brand-500/20 outline-none transition-all"
                       >
-                        <option value="">Select Category</option>
+                        <option value="" className="bg-[#1e293b]">Select Category</option>
                         {BUSINESS_CATEGORIES.map((cat) => (
-                          <option key={cat.value} value={cat.value}>
+                          <option key={cat.value} value={cat.value} className="bg-[#1e293b]">
                             {cat.emoji} {cat.label}
                           </option>
                         ))}
                       </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
+                        <ChevronRight className="w-4 h-4 rotate-90" />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-3 mt-5">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button
                     variant="outline"
-                    className="flex-1 border-[#353d52] text-gray-300 hover:bg-[#252c3e] h-11"
+                    className="flex-1 h-12 border-white/10 bg-white/5 text-white hover:bg-white/10 rounded-xl font-bold"
                     onClick={() => setStep(1)}
                   >
                     ← Back
                   </Button>
                   <Button
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white h-11 font-semibold"
+                    className="flex-2 sm:flex-[2] h-12 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-600/20 active:scale-[0.98] transition-all"
                     onClick={handleCreate}
                     disabled={loading || !businessName}
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Add New Business
+                    Confirm & Start
                   </Button>
                 </div>
               </motion.div>

@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { serialize } from "@/lib/utils";
 import type { CreateExpenseInput } from "@/lib/validations/expense";
 
 async function verifyProfile(profileId: string) {
@@ -60,7 +61,7 @@ export async function getExpenses(
       db.expense.count({ where }),
     ]);
 
-    return { data: expenses, total, page, limit };
+    return { data: serialize(expenses), total, page, limit };
   } catch (e) {
     console.error("[getExpenses]", e);
     return { error: "Failed to fetch expenses" };
@@ -116,7 +117,7 @@ export async function createExpense(profileId: string, input: CreateExpenseInput
 
     revalidatePath("/expense");
     revalidatePath("/dashboard");
-    return { data: expense };
+    return { data: serialize(expense) };
   } catch (e) {
     console.error("[createExpense]", e);
     return { error: "Failed to create expense" };
@@ -263,7 +264,7 @@ export async function getIncomes(
       db.income.count({ where }),
     ]);
 
-    return { data: incomes, total, page, limit };
+    return { data: serialize(incomes), total, page, limit };
   } catch {
     return { error: "Failed to fetch incomes" };
   }
@@ -317,7 +318,7 @@ export async function createIncome(profileId: string, input: CreateExpenseInput)
 
     revalidatePath("/income");
     revalidatePath("/dashboard");
-    return { data: income };
+    return { data: serialize(income) };
   } catch (e) {
     console.error("[createIncome]", e);
     return { error: "Failed to create income" };

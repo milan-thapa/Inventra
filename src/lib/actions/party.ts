@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { serialize } from "@/lib/utils";
 import type { CreatePartyInput, AddPaymentInInput } from "@/lib/validations/party";
 
 // ── Verify profile ownership ──────────────────────────────
@@ -80,7 +81,7 @@ export async function getParty(profileId: string, partyId: string) {
       },
     });
     if (!party) return { error: "Party not found" };
-    return { data: party };
+    return { data: serialize(party) };
   } catch {
     return { error: "Failed to fetch party" };
   }
@@ -127,7 +128,7 @@ export async function createParty(profileId: string, input: CreatePartyInput) {
     });
 
     revalidatePath("/parties");
-    return { data: party };
+    return { data: serialize(party) };
   } catch (e) {
     console.error("[createParty]", e);
     return { error: "Failed to create party" };
@@ -156,7 +157,7 @@ export async function updateParty(
       },
     });
     revalidatePath("/parties");
-    return { data: party };
+    return { data: serialize(party) };
   } catch {
     return { error: "Failed to update party" };
   }
@@ -229,7 +230,7 @@ export async function addPaymentIn(profileId: string, input: AddPaymentInInput) 
 
     revalidatePath("/parties");
     revalidatePath("/dashboard");
-    return { data: result };
+    return { data: serialize(result) };
   } catch (e) {
     console.error("[addPaymentIn]", e);
     return { error: "Failed to add payment" };
@@ -286,7 +287,7 @@ export async function addPaymentOut(profileId: string, input: AddPaymentInInput)
 
     revalidatePath("/parties");
     revalidatePath("/dashboard");
-    return { data: result };
+    return { data: serialize(result) };
   } catch (e) {
     console.error("[addPaymentOut]", e);
     return { error: "Failed to add payment" };

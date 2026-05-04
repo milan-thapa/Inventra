@@ -1,10 +1,13 @@
 // src/app/(dashboard)/layout.tsx
+// src/app/(dashboard)/layout.tsx
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { hasProfiles } from "@/lib/actions/profile";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { CommandPalette } from "@/components/layout/command-palette";
+import { PageTransition } from "@/components/layout/page-transition";
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -25,7 +28,9 @@ export default async function DashboardLayout({
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </main>
       </div>
       <CommandPalette />

@@ -3,7 +3,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { startOfDay, endOfDay, subDays } from "date-fns";
+import { startOfDay, endOfDay, subDays, eachDayOfInterval, format } from "date-fns";
 import { createNotification } from "./notification";
 
 async function verifyProfile(profileId: string) {
@@ -62,38 +62,56 @@ export async function getDashboardStats(profileId: string) {
   }
 }
 
-// ── Cashflow last 7 days ──────────────────────────────────
+// ── Cashflow last 7/28/90 days ────────────────────────────
 export async function getCashflow(profileId: string, period: "daily" | "weekly" | "monthly" = "daily") {
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
 
   try {
     const days = period === "daily" ? 7 : period === "weekly" ? 28 : 90;
-    const result = [];
+    const startDate = startOfDay(subDays(new Date(), days - 1));
+    const endDate = endOfDay(new Date());
 
-    for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i);
-      const dayStart = startOfDay(date);
-      const dayEnd = endOfDay(date);
+    // Fetch all records for the interval
+    const [incomes, expenses] = await Promise.all([
+      db.income.findMany({
+        where: { profileId, date: { gte: startDate, lte: endDate } },
+        select: { date: true, totalAmount: true },
+      }),
+      db.expense.findMany({
+        where: { profileId, date: { gte: startDate, lte: endDate } },
+        select: { date: true, totalAmount: true },
+      }),
+    ]);
 
-      const [income, expense] = await Promise.all([
-        db.income.aggregate({
-          where: { profileId, date: { gte: dayStart, lte: dayEnd } },
-          _sum: { totalAmount: true },
-        }),
-        db.expense.aggregate({
-          where: { profileId, date: { gte: dayStart, lte: dayEnd } },
-          _sum: { totalAmount: true },
-        }),
-      ]);
+    // Group by date
+    const incomeMap = new Map();
+    const expenseMap = new Map();
 
-      result.push({
+    incomes.forEach((inc) => {
+      const d = format(inc.date, "yyyy-MM-dd");
+      incomeMap.set(d, (incomeMap.get(d) || 0) + Number(inc.totalAmount));
+    });
+
+    expenses.forEach((exp) => {
+      const d = format(exp.date, "yyyy-MM-dd");
+      expenseMap.set(d, (expenseMap.get(d) || 0) + Number(exp.totalAmount));
+    });
+
+    // Create interval
+    const interval = eachDayOfInterval({ start: startDate, end: endDate });
+    const result = interval.map((date) => {
+      const d = format(date, "yyyy-MM-dd");
+      return {
         date: date.toISOString(),
-        label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        moneyIn: Number(income._sum.totalAmount ?? 0),
-        moneyOut: Number(expense._sum.totalAmount ?? 0),
-      });
-    }
+        label: format(date, "MMM d"),
+        moneyIn: incomeMap.get(d) || 0,
+        moneyOut: expenseMap.get(d) || 0,
+      };
+    });
+
+    // If weekly or monthly, we might want to group by week/month, but the frontend currently expects daily points
+    // For now, let's return the daily points as requested by the UI
 
     const totalIn = result.reduce((sum, d) => sum + d.moneyIn, 0);
     const totalOut = result.reduce((sum, d) => sum + d.moneyOut, 0);

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
 import type { CreateProfileInput, UpdateSettingsInput } from "@/lib/validations/account";
+import { rateLimit } from "@/lib/ratelimit";
 
 // ── Get all profiles for current user ────────────────────
 export async function getProfiles() {
@@ -55,6 +56,10 @@ export async function getActiveProfile(profileId?: string) {
 export async function createProfile(input: CreateProfileInput) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Unauthorized" };
+
+  // Rate limiting: max 5 profile creations per minute
+  const { success } = await rateLimit(`create_profile_${session.user.id}`, 5, 60 * 1000);
+  if (!success) return { error: "Too many requests. Please try again in a minute." };
 
   try {
     // Check if this is the first profile

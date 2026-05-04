@@ -64,8 +64,22 @@ export function TransactionReportView({
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
+    <div className="space-y-6">
+      {/* Print-only header */}
+      <div className="print-only mb-10 border-b pb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-black mb-1">Inventra Report</h1>
+            <p className="text-gray-500 text-sm">Transaction Statement</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold">Generated on</p>
+            <p className="text-sm text-gray-500">{formatDate(new Date(), "PPpp")}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-5 no-print">
         <div className="flex items-center gap-3">
           <button onClick={() => router.back()}
             className="p-1.5 rounded-lg hover:bg-accent transition-colors text-muted-foreground">
@@ -86,7 +100,7 @@ export function TransactionReportView({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4 no-print">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)}
