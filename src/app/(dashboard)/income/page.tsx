@@ -23,7 +23,7 @@ export default async function IncomePage() {
 
   return (
     <IncomeTable
-      initialIncomes={incomesRes.data?.map(i => ({...i, totalAmount: i.totalAmount.toNumber()})) ?? []}
+      initialIncomes={incomesRes.data ?? []}
       initialTotal={incomesRes.total ?? 0}
       categories={categoriesRes.data ?? []}
       profileId={profileId}

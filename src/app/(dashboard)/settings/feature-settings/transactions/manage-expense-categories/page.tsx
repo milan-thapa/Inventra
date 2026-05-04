@@ -23,7 +23,7 @@ export default async function ManageExpenseCategoriesPage() {
       initialCategories={categoriesRes.data?.map((c) => ({
         id: c.id,
         name: c.name,
-        totalAmount: c.expenses?.reduce((sum, e) => sum + e.totalAmount.toNumber(), 0) ?? 0,
+        totalAmount: c.expenses?.reduce((sum, e) => sum + Number(e.totalAmount), 0) ?? 0,
       })) ?? []}
       profileId={profileId}
       type="expense"

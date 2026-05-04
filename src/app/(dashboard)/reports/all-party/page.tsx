@@ -19,7 +19,7 @@ export default async function AllPartyReportPage() {
 
   const parties = reportRes.data?.map(p => ({
     ...p,
-    openingBalance: p.openingBalance.toNumber(),
+    openingBalance: Number(p.openingBalance),
   })) ?? [];
 
   return (

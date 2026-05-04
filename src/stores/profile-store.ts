@@ -25,6 +25,7 @@ interface ProfileStore {
   setActiveProfileId: (id: string) => void;
   setProfiles: (profiles: Profile[]) => void;
   getActiveProfile: () => Profile | undefined;
+  updateActiveProfile: (updates: Partial<Profile>) => void;
 }
 
 export const useProfileStore = create<ProfileStore>()(
@@ -37,6 +38,14 @@ export const useProfileStore = create<ProfileStore>()(
       getActiveProfile: () => {
         const { activeProfileId, profiles } = get();
         return profiles.find((p) => p.id === activeProfileId) ?? profiles[0];
+      },
+      updateActiveProfile: (updates) => {
+        const { activeProfileId, profiles } = get();
+        if (!activeProfileId) return;
+        const newProfiles = profiles.map((p) =>
+          p.id === activeProfileId ? { ...p, ...updates } : p
+        );
+        set({ profiles: newProfiles });
       },
     }),
     { name: "inventra-profile" }

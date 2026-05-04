@@ -19,7 +19,7 @@ export default async function TransactionReportPage() {
 
   const transactions = txRes.data?.map(tx => ({
     ...tx,
-    amount: tx.amount.toNumber(),
+    amount: Number(tx.amount),
   })) ?? [];
 
   return (

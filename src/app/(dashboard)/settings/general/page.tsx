@@ -42,7 +42,7 @@ const NUM_FORMATS  = [{ value: "indian", label: "1,00,000" }, { value: "internat
 
 export default function GeneralSettingsPage() {
   const { toast } = useToast();
-  const { getActiveProfile } = useProfileStore();
+  const { getActiveProfile, updateActiveProfile } = useProfileStore();
   const activeProfile = getActiveProfile();
   const [loading, setLoading] = useState(false);
 
@@ -92,6 +92,17 @@ export default function GeneralSettingsPage() {
       if (res.error) {
         toast({ variant: "destructive", title: "Error", description: res.error });
       } else {
+        // Update local store to sync other components (like Header)
+        updateActiveProfile({
+          theme: theme as any,
+          language: language as any,
+          currency,
+          currencyPos: currencyPos as any,
+          calendarType: calendar as any,
+          numberFormat: numberFormat as any,
+          privacyMode,
+          appLock,
+        });
         document.documentElement.setAttribute("data-theme", theme);
         toast({ title: "Settings saved successfully" });
       }

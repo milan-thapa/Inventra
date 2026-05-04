@@ -68,7 +68,7 @@ export function AccountsView({
       if (res.data) {
         const newAccount = {
           ...res.data,
-          currentBalance: res.data.currentBalance.toNumber(),
+          currentBalance: Number(res.data.currentBalance),
         };
         setAccounts((prev) => [...prev, newAccount]);
         setTotalBalance((prev) => prev + (parseFloat(form.currentBalance) || 0));

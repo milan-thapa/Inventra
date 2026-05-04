@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationsPanel } from "@/components/layout/notifications-panel";
-import { useUIStore } from "@/stores/profile-store";
+import { useUIStore, useProfileStore } from "@/stores/profile-store";
 import { getInitials } from "@/lib/utils";
+import { updateProfileSettings } from "@/lib/actions/profile";
 
 const THEMES = [
   { value: "dark", label: "Dark Theme", icon: Moon },
@@ -35,16 +36,39 @@ export function Header() {
     notificationsOpen,
   } = useUIStore();
 
+  const { getActiveProfile, updateActiveProfile } = useProfileStore();
+  const activeProfile = getActiveProfile();
+
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
   const [lang, setLang] = useState("en");
 
-  // Apply theme
+  // Sync theme from store on mount and when activeProfile changes
+  useEffect(() => {
+    if (activeProfile?.theme) {
+      setTheme(activeProfile.theme);
+      document.documentElement.setAttribute("data-theme", activeProfile.theme);
+    }
+    if (activeProfile?.language) {
+      setLang(activeProfile.language);
+    }
+  }, [activeProfile?.theme, activeProfile?.language]);
+
+  // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  const handleThemeChange = async (newTheme: string) => {
+    setTheme(newTheme);
+    updateActiveProfile({ theme: newTheme });
+    if (activeProfile?.id) {
+      await updateProfileSettings(activeProfile.id, { theme: newTheme as any });
+    }
+    setThemeMenuOpen(false);
+  };
 
   // Close dropdowns on outside click
   const menuRef = useRef<HTMLDivElement>(null);
@@ -178,7 +202,7 @@ export function Header() {
                   return (
                     <button
                       key={t.value}
-                      onClick={() => { setTheme(t.value); setThemeMenuOpen(false); }}
+                      onClick={() => handleThemeChange(t.value)}
                       className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm hover:bg-accent transition-colors"
                     >
                       <Icon className="w-4 h-4 text-muted-foreground" />
@@ -233,7 +257,7 @@ export function Header() {
                       return (
                         <button
                           key={t.value}
-                          onClick={() => setTheme(t.value)}
+                          onClick={() => handleThemeChange(t.value)}
                           title={t.label}
                           className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${theme === t.value
                               ? "bg-emerald-600/20 text-emerald-500"

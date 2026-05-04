@@ -19,6 +19,8 @@ export function serialize<T>(data: T): T {
     return data.map(item => serialize(item)) as any;
   }
 
+  if (data instanceof Date) return data;
+
   if (typeof data === "object") {
     // Check if it's a Prisma Decimal (has d, e, s properties or toNumber method)
     if ((data as any).toNumber && typeof (data as any).toNumber === "function") {

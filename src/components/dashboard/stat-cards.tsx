@@ -98,7 +98,7 @@ export function StatCards({ stats }: { stats: Stats }) {
                 }
               </div>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-muted-foreground mb-1 truncate relative z-10">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/60 dark:text-muted-foreground mb-1 truncate relative z-10">
               {card.label(stats.currentMonth)}
             </p>
             <p className={cn("text-xl font-bold tracking-tight relative z-10", card.valueClass)}>

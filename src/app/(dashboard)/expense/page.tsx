@@ -23,7 +23,7 @@ export default async function ExpensePage() {
 
   return (
     <ExpenseTable
-      initialExpenses={expensesRes.data?.map(e => ({...e, totalAmount: e.totalAmount.toNumber()})) ?? []}
+      initialExpenses={expensesRes.data ?? []}
       initialTotal={expensesRes.total ?? 0}
       categories={categoriesRes.data ?? []}
       profileId={profileId}

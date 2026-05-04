@@ -27,11 +27,7 @@ export default async function PartyDetailPage({ params }: { params: { partyId: s
 
   return (
     <PartyDetail
-      party={{
-        ...partyRes.data,
-        openingBalance: partyRes.data.openingBalance.toNumber(),
-        partyTransactions: partyRes.data.partyTransactions.map(tx => ({...tx, amount: tx.amount.toNumber()}))
-      }}
+      party={partyRes.data}
       profileId={profileId}
     />
   );

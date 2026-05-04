@@ -19,7 +19,7 @@ export default async function ManageAccountPage() {
 
   return (
     <AccountsView
-      initialAccounts={accountsRes.data?.map(a => ({...a, currentBalance: a.currentBalance.toNumber()})) ?? []}
+      initialAccounts={accountsRes.data?.map(a => ({...a, currentBalance: Number(a.currentBalance)})) ?? []}
       initialTotal={accountsRes.totalBalance ?? 0}
       profileId={profileId}
     />

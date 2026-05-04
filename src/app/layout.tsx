@@ -56,6 +56,27 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var store = JSON.parse(localStorage.getItem('inventra-profile'));
+                  if (store && store.state && store.state.activeProfileId) {
+                    var profile = store.state.profiles.find(function(p) { 
+                      return p.id === store.state.activeProfileId; 
+                    }) || store.state.profiles[0];
+                    if (profile && profile.theme) {
+                      document.documentElement.setAttribute('data-theme', profile.theme);
+                    }
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
       </body>

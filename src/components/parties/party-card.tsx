@@ -47,13 +47,13 @@ export function PartyCard({
       <div className="text-right flex-shrink-0">
         <p className={cn(
           "text-xs font-semibold",
-          isReceivable ? "text-emerald-400" : "text-rose-400"
+          isReceivable ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
         )}>
           {formatCurrency(balance)}
         </p>
         <p className={cn(
           "text-[10px]",
-          isReceivable ? "text-emerald-500/70" : "text-rose-500/70"
+          isReceivable ? "text-emerald-600/70 dark:text-emerald-500/70" : "text-rose-600/70 dark:text-rose-500/70"
         )}>
           {isReceivable ? "To Receive" : "To Give"}
         </p>
