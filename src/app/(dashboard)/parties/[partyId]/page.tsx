@@ -27,7 +27,7 @@ export default async function PartyDetailPage({ params }: { params: { partyId: s
 
   return (
     <PartyDetail
-      party={partyRes.data}
+      party={partyRes.data as any}
       profileId={profileId}
     />
   );

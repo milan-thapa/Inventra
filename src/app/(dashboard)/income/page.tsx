@@ -23,9 +23,9 @@ export default async function IncomePage() {
 
   return (
     <IncomeTable
-      initialIncomes={incomesRes.data ?? []}
+      initialIncomes={(incomesRes.data as any) ?? []}
       initialTotal={incomesRes.total ?? 0}
-      categories={categoriesRes.data ?? []}
+      categories={(categoriesRes.data as any) ?? []}
       profileId={profileId}
     />
   );

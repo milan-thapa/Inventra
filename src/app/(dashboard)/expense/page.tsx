@@ -23,9 +23,9 @@ export default async function ExpensePage() {
 
   return (
     <ExpenseTable
-      initialExpenses={expensesRes.data ?? []}
+      initialExpenses={(expensesRes.data as any) ?? []}
       initialTotal={expensesRes.total ?? 0}
-      categories={categoriesRes.data ?? []}
+      categories={(categoriesRes.data as any) ?? []}
       profileId={profileId}
     />
   );
