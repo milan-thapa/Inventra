@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Users, Receipt, Wallet, Building2,
   BarChart3, Wrench, HelpCircle, BookOpen, Sparkles,
-  Settings, CreditCard, Gift, Bell, Image, ChevronDown,
+  Settings, CreditCard, Gift, Bell, Image as ImageIcon, ChevronDown,
   ChevronRight, Plus, Check, Menu, X, Package, Tag, ShoppingCart, Store,
 } from "lucide-react";
 import { cn, getInitials, getAvatarColor } from "@/lib/utils";
@@ -44,7 +44,7 @@ const TOOLS_ITEMS = [
   { label: "Business Cards", href: "/business-tools/business-cards", icon: CreditCard },
   { label: "Greeting Cards", href: "/business-tools/greeting-cards", icon: Gift },
   { label: "Reminders", href: "/business-tools/reminders", icon: Bell },
-  { label: "Bill Gallery", href: "/business-tools/bill-gallery", icon: Image },
+  { label: "Bill Gallery", href: "/business-tools/bill-gallery", icon: ImageIcon },
   { label: "Notebook", href: "/business-tools/notebook", icon: BookOpen },
 ];
 

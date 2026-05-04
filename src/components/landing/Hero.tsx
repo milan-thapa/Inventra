@@ -5,6 +5,7 @@ import { MotionButton } from "./ui/MotionButton";
 import Link from "next/link";
 import { APP_TAGLINE, APP_DESCRIPTION } from "@/lib/constants";
 import { ChevronRight, Play, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function Hero() {
   return (

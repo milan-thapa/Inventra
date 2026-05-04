@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { createProfile } from "@/lib/actions/profile";
 import { BUSINESS_CATEGORIES, APP_NAME } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type ProfileType = "BUSINESS" | "PERSONAL";
 

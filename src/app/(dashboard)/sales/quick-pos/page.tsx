@@ -44,6 +44,25 @@ export default function QuickPOSPage() {
     }
   }, [activeProfileId]);
 
+  const addToCart = useCallback((item: any) => {
+    if (item.stockQuantity <= 0) {
+        toast.error(`Out of stock: ${item.name}`);
+        return;
+    }
+    const existing = cart.find(i => i.id === item.id);
+    if (existing) {
+      if (existing.quantity >= item.stockQuantity) {
+        toast.warning("Cannot add more than available stock");
+        return;
+      }
+      setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
+    } else {
+      setCart(prev => [{ ...item, quantity: 1 }, ...prev]);
+    }
+    setSearch("");
+    searchInputRef.current?.focus();
+  }, [cart]);
+
   // Barcode / USB Scanner Support
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -72,25 +91,6 @@ export default function QuickPOSPage() {
     const matchesCategory = activeCategory === "All" || item.category?.name === activeCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const addToCart = useCallback((item: any) => {
-    if (item.stockQuantity <= 0) {
-        toast.error(`Out of stock: ${item.name}`);
-        return;
-    }
-    const existing = cart.find(i => i.id === item.id);
-    if (existing) {
-      if (existing.quantity >= item.stockQuantity) {
-        toast.warning("Cannot add more than available stock");
-        return;
-      }
-      setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
-    } else {
-      setCart(prev => [{ ...item, quantity: 1 }, ...prev]);
-    }
-    setSearch("");
-    searchInputRef.current?.focus();
-  }, [cart]);
 
   const updateQuantity = (id: string, delta: number) => {
     setCart(cart.map(i => {
@@ -164,7 +164,7 @@ export default function QuickPOSPage() {
       {lastSale && (
         <ThermalReceipt 
           businessName={profile?.name || "Inventra POS"}
-          address={profile?.address}
+          address={profile?.address || undefined}
           invoiceNo={lastSale.invoiceNo.toString()}
           date={lastSale.date}
           items={lastSale.items}
