@@ -313,8 +313,16 @@ async function recalculatePartyBalance(
     if (t.type === "OPENING_BALANCE") {
       balance = party.balanceType === "TO_RECEIVE" ? amount : -amount;
     } else if (t.type === "PAYMENT_IN") {
-      balance += amount;
+      // Customer pays me -> Receivable goes down (-)
+      balance -= amount;
     } else if (t.type === "PAYMENT_OUT") {
+      // I pay supplier -> Payable goes down (+)
+      balance += amount;
+    } else if (t.type === "SALE") {
+      // I sell to customer -> Receivable goes up (+)
+      balance += amount;
+    } else if (t.type === "PURCHASE") {
+      // I buy from supplier -> Payable goes up (-)
       balance -= amount;
     }
   }

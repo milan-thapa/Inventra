@@ -111,15 +111,83 @@ export async function createSale(
           });
         }
       }
-      
-      // Optionally update party balances (TO_RECEIVE) if it's UNPAID/PARTIAL
-      // Simplified for now: just recording the sale
+
+      // Record in Party Ledger if customer is selected
+      if (data.partyId) {
+        const lastPartyTx = await tx.partyTransaction.findFirst({
+            where: { profileId, type: "SALE" },
+            orderBy: { receiptNumber: "desc" },
+        });
+        const nextReceiptNo = (lastPartyTx?.receiptNumber ?? 0) + 1;
+
+        // 1. Record the Sale itself
+        await tx.partyTransaction.create({
+          data: {
+            partyId: data.partyId,
+            profileId,
+            receiptNumber: nextReceiptNo,
+            type: "SALE",
+            amount: data.grandTotal,
+            paymentMethod: data.paymentMethod,
+            remarks: `Sale Invoice #${invoiceNo}`,
+            date: data.date,
+          },
+        });
+
+        // 2. If PAID, record the payment received immediately
+        if (data.status === "PAID") {
+          await tx.partyTransaction.create({
+            data: {
+              partyId: data.partyId,
+              profileId,
+              receiptNumber: nextReceiptNo + 1,
+              type: "PAYMENT_IN",
+              amount: data.grandTotal,
+              paymentMethod: data.paymentMethod,
+              remarks: `Payment for Invoice #${invoiceNo}`,
+              date: data.date,
+            },
+          });
+        }
+
+        // 3. Recalculate balance for this party (using the same logic as party.ts)
+        const party = await tx.party.findUnique({ where: { id: data.partyId } });
+        if (party) {
+            const txs = await tx.partyTransaction.findMany({
+                where: { partyId: data.partyId },
+                orderBy: { date: "asc" },
+            });
+            let balance = 0;
+            for (const t of txs) {
+                const amount = Number(t.amount);
+                if (t.type === "OPENING_BALANCE") {
+                    balance = party.balanceType === "TO_RECEIVE" ? amount : -amount;
+                } else if (t.type === "PAYMENT_IN") {
+                    balance -= amount;
+                } else if (t.type === "PAYMENT_OUT") {
+                    balance += amount;
+                } else if (t.type === "SALE") {
+                    balance += amount;
+                } else if (t.type === "PURCHASE") {
+                    balance -= amount;
+                }
+            }
+            const newBalanceType = balance > 0 ? "TO_RECEIVE" : balance < 0 ? "TO_GIVE" : "SETTLED";
+            await tx.party.update({
+                where: { id: data.partyId },
+                data: {
+                    openingBalance: Math.abs(balance),
+                    balanceType: newBalanceType,
+                },
+            });
+        }
+      }
 
       // Create a unified transaction record for the ledger
       await tx.transaction.create({
         data: {
           profileId,
-          type: "INCOME", // Or maybe create a new TransactionType like SALE
+          type: "SALE",
           referenceId: sale.id,
           amount: data.grandTotal,
           description: `Sale Invoice #${invoiceNo}`,

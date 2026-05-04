@@ -44,6 +44,7 @@ export default function QuickPOSPage() {
   
   const [parties, setParties] = useState<any[]>([]);
   const [selectedPartyId, setSelectedPartyId] = useState<string>("CASH_CUSTOMER");
+  const [paymentStatus, setPaymentStatus] = useState<"PAID" | "UNPAID">("PAID");
   const [discountPercent, setDiscountPercent] = useState(0);
   const [taxPercent, setTaxPercent] = useState(0);
 
@@ -149,7 +150,7 @@ export default function QuickPOSPage() {
       grandTotal: total,
       partyId: selectedPartyId === "CASH_CUSTOMER" ? undefined : selectedPartyId,
       paymentMethod,
-      status: "PAID",
+      status: paymentStatus,
       date: new Date(),
     };
 
@@ -166,6 +167,7 @@ export default function QuickPOSPage() {
       setDiscountPercent(0);
       setTaxPercent(0);
       setSelectedPartyId("CASH_CUSTOMER");
+      setPaymentStatus("PAID");
     }
   };
 
@@ -176,6 +178,7 @@ export default function QuickPOSPage() {
     setDiscountPercent(0);
     setTaxPercent(0);
     setSelectedPartyId("CASH_CUSTOMER");
+    setPaymentStatus("PAID");
   };
 
   const handlePrint = () => {
@@ -355,6 +358,35 @@ export default function QuickPOSPage() {
                     </SelectContent>
                 </Select>
             </div>
+
+            <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Payment Status</label>
+                <div className="flex p-1 bg-background rounded-xl border border-border/50 shadow-sm">
+                    <button 
+                        onClick={() => setPaymentStatus("PAID")}
+                        className={cn(
+                            "flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                            paymentStatus === "PAID" ? "bg-emerald-500 text-white shadow-md" : "text-muted-foreground hover:bg-secondary/50"
+                        )}
+                    >
+                        Paid
+                    </button>
+                    <button 
+                        onClick={() => setPaymentStatus("UNPAID")}
+                        disabled={selectedPartyId === "CASH_CUSTOMER"}
+                        className={cn(
+                            "flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                            paymentStatus === "UNPAID" ? "bg-rose-500 text-white shadow-md" : "text-muted-foreground hover:bg-secondary/50",
+                            selectedPartyId === "CASH_CUSTOMER" && "opacity-30 cursor-not-allowed grayscale"
+                        )}
+                    >
+                        Credit
+                    </button>
+                </div>
+                {selectedPartyId === "CASH_CUSTOMER" && (
+                    <p className="text-[8px] text-muted-foreground italic px-1">* Credit only available for registered Parties</p>
+                )}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/10 custom-scrollbar">
@@ -429,8 +461,9 @@ export default function QuickPOSPage() {
                         </div>
                         <Input 
                             type="number" 
-                            value={discountPercent} 
+                            value={discountPercent || ""} 
                             onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                            placeholder="0"
                             className="h-8 bg-secondary/30 border-none focus-visible:ring-emerald-500 text-xs font-bold"
                         />
                     </div>
@@ -441,8 +474,9 @@ export default function QuickPOSPage() {
                         </div>
                         <Input 
                             type="number" 
-                            value={taxPercent} 
+                            value={taxPercent || ""} 
                             onChange={(e) => setTaxPercent(Number(e.target.value))}
+                            placeholder="0"
                             className="h-8 bg-secondary/30 border-none focus-visible:ring-emerald-500 text-xs font-bold"
                         />
                     </div>

@@ -182,6 +182,8 @@ enum PartyTxType {
   PAYMENT_IN
   PAYMENT_OUT
   OPENING_BALANCE
+  SALE
+  PURCHASE
 }
 enum PaymentMethod {
   CASH
@@ -326,6 +328,8 @@ enum TransactionType {
   INCOME
   PAYMENT_IN
   PAYMENT_OUT
+  SALE
+  PURCHASE
 }
 
 // ─────────────────────────────────────────
