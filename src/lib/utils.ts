@@ -8,6 +8,35 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Recursively converts Prisma Decimal objects to numbers for client-side serialization.
+ * Next.js Server Components cannot pass Decimal objects directly to Client Components.
+ */
+export function serialize<T>(data: T): T {
+  if (data === null || data === undefined) return data;
+
+  if (Array.isArray(data)) {
+    return data.map(item => serialize(item)) as any;
+  }
+
+  if (typeof data === "object") {
+    // Check if it's a Prisma Decimal (has d, e, s properties or toNumber method)
+    if ((data as any).toNumber && typeof (data as any).toNumber === "function") {
+      return (data as any).toNumber();
+    }
+
+    const result: any = {};
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        result[key] = serialize(data[key]);
+      }
+    }
+    return result as T;
+  }
+
+  return data;
+}
+
 // ── Currency formatting ──────────────────────────────────
 export function formatCurrency(
   amount: number | string,

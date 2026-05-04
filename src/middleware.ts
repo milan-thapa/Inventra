@@ -15,10 +15,37 @@ const PUBLIC_ROUTES = [
 
 const AUTH_ROUTES = ["/login"];
 
+function addSecurityHeaders(response: NextResponse) {
+  const contentSecurityPolicyHeaderValue = `
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    img-src 'self' blob: data: https://utfs.io https://lh3.googleusercontent.com https://avatars.githubusercontent.com;
+    font-src 'self' https://fonts.gstatic.com;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    block-all-mixed-content;
+    upgrade-insecure-requests;
+  `.replace(/\s{2,}/g, ' ').trim();
+
+  response.headers.set('Content-Security-Policy', contentSecurityPolicyHeaderValue);
+  response.headers.set('Referrer-Policy', 'origin-when-cross-origin');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-DNS-Prefetch-Control', 'on');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+
+  return response;
+}
+
 export default auth((req) => {
   const { nextUrl, auth: session } = req as NextRequest & { auth: { user?: { id: string; name?: string; email?: string } } | null };
   const isLoggedIn = !!session;
   const pathname = nextUrl.pathname;
+
+  let response = NextResponse.next();
 
   // Allow public assets and API routes
   if (
@@ -27,7 +54,7 @@ export default auth((req) => {
     pathname.startsWith("/api/uploadthing") ||
     pathname.includes(".")
   ) {
-    return NextResponse.next();
+    return addSecurityHeaders(response);
   }
 
   const isPublicRoute = PUBLIC_ROUTES.some(
@@ -49,17 +76,19 @@ export default auth((req) => {
 
   // Redirect logged-in users away from auth routes
   if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", nextUrl));
+    response = NextResponse.redirect(new URL("/dashboard", nextUrl));
+    return addSecurityHeaders(response);
   }
 
   // Redirect unauthenticated users from protected routes
   if (isDashboardRoute && !isLoggedIn) {
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    response = NextResponse.redirect(loginUrl);
+    return addSecurityHeaders(response);
   }
 
-  return NextResponse.next();
+  return addSecurityHeaders(response);
 });
 
 export const config = {
