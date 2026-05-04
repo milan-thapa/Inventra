@@ -69,9 +69,9 @@ export function StatCards({ stats }: { stats: Stats }) {
             whileTap={{ scale: 0.98 }}
             transition={{ delay: i * 0.07, type: "spring", stiffness: 300, damping: 20 }}
             className={cn(
-              "rounded-xl p-4 border border-white/5 relative overflow-hidden group transition-all duration-300",
+              "rounded-xl p-4 border border-border relative overflow-hidden group transition-all duration-300 shadow-sm",
               card.cardClass,
-              "hover:shadow-lg hover:shadow-black/20 hover:border-white/10"
+              "hover:shadow-md hover:border-border/80"
             )}
           >
             {/* Subtle light streak on hover */}
@@ -79,13 +79,13 @@ export function StatCards({ stats }: { stats: Stats }) {
             
             <div className="flex items-center justify-between mb-2 relative z-10">
               <div className={cn(
-                "w-8 h-8 rounded-xl flex items-center justify-center bg-black/10 backdrop-blur-sm group-hover:scale-110 transition-transform",
+                "w-8 h-8 rounded-xl flex items-center justify-center bg-background/50 backdrop-blur-sm group-hover:scale-110 transition-transform",
                 card.iconClass
               )}>
                 <Icon className="w-4 h-4" />
               </div>
               <div className={cn(
-                "w-6 h-6 rounded-lg flex items-center justify-center bg-black/10 backdrop-blur-sm",
+                "w-6 h-6 rounded-lg flex items-center justify-center bg-background/50 backdrop-blur-sm",
                 card.iconClass
               )}>
                 {card.arrowUp
@@ -94,7 +94,7 @@ export function StatCards({ stats }: { stats: Stats }) {
                 }
               </div>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1 truncate relative z-10">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 truncate relative z-10">
               {card.label(stats.currentMonth)}
             </p>
             <p className={cn("text-xl font-bold tracking-tight relative z-10", card.valueClass)}>
