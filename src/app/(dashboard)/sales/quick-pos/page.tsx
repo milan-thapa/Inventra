@@ -12,10 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProfileStore } from "@/stores/profile-store";
 import { createSale } from "@/lib/actions/sales";
-import { getItems } from "@/lib/actions/inventory";
+import { getItems, getItemCategories } from "@/lib/actions/inventory";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { Recommendations } from "@/components/sales/recommendations";
+import { ThermalReceipt } from "@/components/sales/thermal-receipt";
+import { PaymentQRModal } from "@/components/sales/payment-qr-modal";
+import { Smartphone } from "lucide-react";
 
 export default function QuickPOSPage() {
   const router = useRouter();
@@ -26,20 +30,47 @@ export default function QuickPOSPage() {
   const [items, setItems] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [activeCategory, setActiveCategory] = useState("All");
   
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [lastSale, setLastSale] = useState<any>(null);
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => {
     if (activeProfileId) {
       getItems(activeProfileId).then(res => res.data && setItems(res.data));
+      getItemCategories(activeProfileId).then(res => res.data && setCategories(res.data));
     }
   }, [activeProfileId]);
+
+  // Barcode / USB Scanner Support
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // If F1 is pressed, focus search
+      if (e.key === "F1") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      
+      // If Enter is pressed and we have a perfect match in SKU
+      if (e.key === "Enter" && search.length > 3) {
+        const item = items.find(i => i.sku === search);
+        if (item) {
+          addToCart(item);
+          setSearch("");
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [search, items]);
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
                           (item.sku && item.sku.toLowerCase().includes(search.toLowerCase()));
-    return matchesSearch;
+    const matchesCategory = activeCategory === "All" || item.category?.name === activeCategory;
+    return matchesSearch && matchesCategory;
   });
 
   const addToCart = (item: any) => {
@@ -113,16 +144,47 @@ export default function QuickPOSPage() {
     if (res.error || !res.data) {
       toast.error(res.error || "Failed to complete sale");
     } else {
+      setLastSale({ ...res.data, items: cart });
       toast.success(`POS Sale Completed! Invoice #${res.data.invoiceNo}`, {
         description: `Total Amount: ${formatCurrency(total, profile?.currency, profile?.currencyPos as any)}`,
         icon: <Sparkles className="w-4 h-4 text-emerald-500" />
       });
       setCart([]);
+      setQrOpen(false);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col overflow-hidden -m-4 md:-m-6">
+      {/* Thermal Receipt (Hidden, only for print) */}
+      {lastSale && (
+        <ThermalReceipt 
+          businessName={profile?.name || "Inventra POS"}
+          address={profile?.address}
+          invoiceNo={lastSale.invoiceNo.toString()}
+          date={lastSale.date}
+          items={lastSale.items}
+          subtotal={lastSale.totalAmount}
+          tax={lastSale.tax}
+          discount={lastSale.discount}
+          total={lastSale.grandTotal}
+          currency={profile?.currency}
+        />
+      )}
+
+      <PaymentQRModal 
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        onConfirm={handleCheckout}
+        amount={total}
+        currency={profile?.currency}
+        businessName={profile?.name || "Inventra POS"}
+      />
+
       <div className="flex-1 flex overflow-hidden bg-secondary/5">
         {/* ── LEFT: PRODUCT GRID ────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -139,6 +201,11 @@ export default function QuickPOSPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {lastSale && (
+                      <Button onClick={handlePrint} variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest border-emerald-500 text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500 hover:text-white">
+                        <History className="w-3.5 h-3.5 mr-1.5" /> Print Last Bill (#{lastSale.invoiceNo})
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest border-border/50">
                         <History className="w-3.5 h-3.5 mr-1.5" /> History
                     </Button>
@@ -162,18 +229,29 @@ export default function QuickPOSPage() {
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {["All", "Recent", "Electronics", "FMCG", "Services"].map((cat) => (
+              <button
+                onClick={() => setActiveCategory("All")}
+                className={cn(
+                  "px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap border-2",
+                  activeCategory === "All" 
+                      ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
+                      : "bg-card border-border/50 text-muted-foreground hover:border-emerald-500/50"
+                )}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.name)}
                   className={cn(
                     "px-5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap border-2",
-                    activeCategory === cat 
+                    activeCategory === cat.name 
                         ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20" 
                         : "bg-card border-border/50 text-muted-foreground hover:border-emerald-500/50"
                   )}
                 >
-                  {cat}
+                  {cat.name}
                 </button>
               ))}
             </div>
@@ -241,7 +319,7 @@ export default function QuickPOSPage() {
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/10">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/10 custom-scrollbar">
             <AnimatePresence mode="popLayout">
               {cart.map((item) => (
                 <motion.div 
@@ -289,16 +367,13 @@ export default function QuickPOSPage() {
                 </motion.div>
               ))}
             </AnimatePresence>
-            
-            {cart.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <div className="w-24 h-24 bg-card rounded-full flex items-center justify-center mb-6 shadow-inner border border-border/20">
-                  <ShoppingCart className="w-10 h-10 text-muted-foreground opacity-20" />
-                </div>
-                <h3 className="font-bold text-muted-foreground uppercase tracking-widest text-xs">Waiting for products...</h3>
-                <p className="text-[10px] text-muted-foreground/60 mt-2 max-w-[180px]">Please select items from the product grid to start the checkout process.</p>
-              </div>
-            )}
+
+            <Recommendations 
+              profileId={activeProfileId!}
+              cartItemIds={cart.map(i => i.id)}
+              onAdd={addToCart}
+              currency={profile?.currency}
+            />
           </div>
 
           <div className="p-6 bg-card border-t-2 border-border/30 space-y-5">
@@ -331,12 +406,12 @@ export default function QuickPOSPage() {
               </Button>
               <Button 
                 disabled={loading || cart.length === 0} 
-                onClick={() => handleCheckout("BANK")}
+                onClick={() => setQrOpen(true)}
                 variant="outline"
                 className="h-16 border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 flex flex-col gap-0 active:scale-95 transition-transform"
               >
-                <CreditCard className="w-6 h-6 mb-1" />
-                <span className="text-[10px] uppercase font-black tracking-widest">Bank Transfer</span>
+                <Smartphone className="w-6 h-6 mb-1" />
+                <span className="text-[10px] uppercase font-black tracking-widest">QR Payment</span>
               </Button>
             </div>
           </div>

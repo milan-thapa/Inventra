@@ -8,9 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useProfileStore } from "@/stores/profile-store";
-import { getItem, updateItem } from "@/lib/actions/inventory";
+import { getItem, updateItem, getItemCategories } from "@/lib/actions/inventory";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function EditItemPage() {
   const router = useRouter();
@@ -21,15 +28,22 @@ export default function EditItemPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [item, setItem] = useState<any>(null);
+  const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
     if (activeProfileId && itemId) {
-      getItem(activeProfileId, itemId).then(res => {
-        if (res.data) {
-          setItem(res.data);
+      Promise.all([
+        getItem(activeProfileId, itemId),
+        getItemCategories(activeProfileId)
+      ]).then(([itemRes, catRes]) => {
+        if (itemRes.data) {
+          setItem(itemRes.data);
         } else {
-          toast.error(res.error || "Item not found");
+          toast.error(itemRes.error || "Item not found");
           router.push("/inventory");
+        }
+        if (catRes.data) {
+          setCategories(catRes.data);
         }
         setLoading(false);
       });
@@ -49,6 +63,7 @@ export default function EditItemPage() {
       sellingPrice: Number(formData.get("sellingPrice")) || 0,
       stockQuantity: Number(formData.get("stockQuantity")) || 0,
       unit: formData.get("unit") as string,
+      categoryId: formData.get("categoryId") as string === "none" ? undefined : formData.get("categoryId") as string,
     };
 
     const res = await updateItem(activeProfileId, itemId, data);
@@ -87,6 +102,23 @@ export default function EditItemPage() {
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="name">Item Name <span className="text-destructive">*</span></Label>
             <Input id="name" name="name" required defaultValue={item.name} placeholder="e.g. iPhone 15 Pro" />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="categoryId">Category</Label>
+            <Select name="categoryId" defaultValue={item.categoryId || "none"}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

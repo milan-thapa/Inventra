@@ -103,6 +103,11 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Inventory</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/inventory/categories">
+              <Filter className="w-4 h-4 mr-2" /> Manage Categories
+            </Link>
+          </Button>
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" /> Export
           </Button>

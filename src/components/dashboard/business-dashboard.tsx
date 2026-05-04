@@ -6,6 +6,7 @@ import { TotalBalance } from "./total-balance";
 import { UpcomingReminders } from "./upcoming-reminders";
 import { BusinessDashboardActions } from "./business-dashboard-actions";
 import { RecentTransactions } from "./recent-transactions";
+import { AIConsultant } from "./ai-consultant";
 
 interface BusinessDashboardProps {
   profile: any;
@@ -36,6 +37,9 @@ export function BusinessDashboard({
 
       {/* Stat cards */}
       <BusinessStatCards stats={stats} />
+
+      {/* AI Consultant & Stock Alerts */}
+      <AIConsultant profileId={profile.id} />
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">

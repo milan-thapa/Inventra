@@ -113,6 +113,7 @@ model Profile {
   items             Item[]
   sales             Sale[]
   purchases         Purchase[]
+  itemCategories    ItemCategory[]
 
   @@index([userId])
 }
@@ -423,6 +424,22 @@ model Item {
   saleItems      SaleItem[]
   purchaseItems  PurchaseItem[]
 
+  categoryId     String?
+  category       ItemCategory? @relation(fields: [categoryId], references: [id])
+
+  @@index([profileId])
+}
+
+model ItemCategory {
+  id        String    @id @default(cuid())
+  profileId String
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime  @default(now())
+
+  items     Item[]
+
+  @@unique([profileId, name])
   @@index([profileId])
 }
 

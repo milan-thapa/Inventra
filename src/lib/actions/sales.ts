@@ -64,15 +64,15 @@ export async function createSale(
   if (!profile) return { error: "Unauthorized" };
 
   try {
-    // Get next invoice number
-    const lastSale = await db.sale.findFirst({
-      where: { profileId },
-      orderBy: { invoiceNo: "desc" },
-    });
-    const invoiceNo = (lastSale?.invoiceNo || 0) + 1;
-
     // Use transaction to ensure all operations succeed or fail together
     const result = await db.$transaction(async (tx) => {
+      // Get next invoice number inside transaction to prevent race conditions
+      const lastSale = await tx.sale.findFirst({
+        where: { profileId },
+        orderBy: { invoiceNo: "desc" },
+      });
+      const invoiceNo = (lastSale?.invoiceNo || 0) + 1;
+
       const sale = await tx.sale.create({
         data: {
           profileId,

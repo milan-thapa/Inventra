@@ -17,6 +17,7 @@ export async function getItems(profileId: string) {
   try {
     const items = await db.item.findMany({
       where: { profileId },
+      include: { category: true },
       orderBy: { createdAt: "desc" },
     });
     
@@ -43,6 +44,7 @@ export async function createItem(
     sellingPrice: number;
     stockQuantity: number;
     unit?: string;
+    categoryId?: string;
   }
 ) {
   const profile = await verifyProfile(profileId);
@@ -58,6 +60,7 @@ export async function createItem(
         sellingPrice: data.sellingPrice,
         stockQuantity: data.stockQuantity,
         unit: data.unit,
+        categoryId: data.categoryId,
       },
     });
     
@@ -102,6 +105,7 @@ export async function updateItem(
     sellingPrice?: number;
     stockQuantity?: number;
     unit?: string;
+    categoryId?: string;
   }
 ) {
   const profile = await verifyProfile(profileId);
@@ -117,6 +121,7 @@ export async function updateItem(
         sellingPrice: data.sellingPrice,
         stockQuantity: data.stockQuantity,
         unit: data.unit,
+        categoryId: data.categoryId,
       },
     });
     
@@ -145,3 +150,48 @@ export async function deleteItem(profileId: string, itemId: string) {
   }
 }
 
+export async function getItemCategories(profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const categories = await db.itemCategory.findMany({
+      where: { profileId },
+      orderBy: { name: "asc" },
+    });
+    return { data: categories };
+  } catch (e) {
+    console.error("[getItemCategories]", e);
+    return { error: "Failed to fetch categories" };
+  }
+}
+
+export async function createItemCategory(profileId: string, name: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const category = await db.itemCategory.create({
+      data: { profileId, name },
+    });
+    return { data: category };
+  } catch (e) {
+    console.error("[createItemCategory]", e);
+    return { error: "Failed to create category" };
+  }
+}
+
+export async function deleteItemCategory(profileId: string, categoryId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    await db.itemCategory.delete({
+      where: { id: categoryId, profileId },
+    });
+    return { success: true };
+  } catch (e) {
+    console.error("[deleteItemCategory]", e);
+    return { error: "Failed to delete category" };
+  }
+}

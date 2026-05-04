@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
@@ -8,13 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useProfileStore } from "@/stores/profile-store";
-import { createItem } from "@/lib/actions/inventory";
+import { createItem, getItemCategories } from "@/lib/actions/inventory";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AddItemPage() {
   const router = useRouter();
   const { activeProfileId } = useProfileStore();
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeProfileId) {
+      getItemCategories(activeProfileId).then(res => res.data && setCategories(res.data));
+    }
+  }, [activeProfileId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,6 +43,7 @@ export default function AddItemPage() {
       sellingPrice: Number(formData.get("sellingPrice")) || 0,
       stockQuantity: Number(formData.get("stockQuantity")) || 0,
       unit: formData.get("unit") as string,
+      categoryId: formData.get("categoryId") as string || undefined,
     };
 
     const res = await createItem(activeProfileId, data);
@@ -58,6 +73,23 @@ export default function AddItemPage() {
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="name">Item Name <span className="text-destructive">*</span></Label>
             <Input id="name" name="name" required placeholder="e.g. iPhone 15 Pro" />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="categoryId">Category</Label>
+            <Select name="categoryId">
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
