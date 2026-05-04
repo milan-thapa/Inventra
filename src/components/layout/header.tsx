@@ -224,9 +224,9 @@ export function Header() {
               onClick={() => { setUserMenuOpen(!userMenuOpen); setThemeMenuOpen(false); setLangMenuOpen(false); }}
               className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-md hover:bg-accent transition-colors"
             >
-              <Avatar className="w-7 h-7 flex-shrink-0">
-                <AvatarImage src={session?.user?.image ?? ""} />
-                <AvatarFallback className="text-xs bg-emerald-600 text-white font-semibold">
+              <Avatar className="w-8 h-8 flex-shrink-0 border border-border/50 shadow-sm">
+                <AvatarImage src={session?.user?.image ?? ""} alt={session?.user?.name ?? "User"} />
+                <AvatarFallback className="text-xs bg-emerald-600 text-white font-bold">
                   {getInitials(session?.user?.name ?? "U")}
                 </AvatarFallback>
               </Avatar>
