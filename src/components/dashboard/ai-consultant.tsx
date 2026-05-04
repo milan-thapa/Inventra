@@ -6,7 +6,8 @@ import { Sparkles, TrendingUp, TrendingDown, Info, AlertTriangle } from "lucide-
 import { motion, AnimatePresence } from "framer-motion";
 import { getAIInsights, getInventoryForecast } from "@/lib/actions/intelligence";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface AIConsultantProps {
   profileId: string;
@@ -36,47 +37,54 @@ export function AIConsultant({ profileId }: AIConsultantProps) {
   const hasAlerts = forecasts.length > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* ── Insights Panel ───────────────────────────── */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl shadow-indigo-500/20"
+        className="lg:col-span-3 bg-card border border-border/50 rounded-xl p-6 shadow-sm"
       >
-        {/* Decorative background elements */}
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <Sparkles className="w-32 h-32 rotate-12" />
-        </div>
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-
-        <div className="relative z-10 flex flex-col h-full">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-              <Sparkles className="w-5 h-5" />
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+              </div>
+              <h2 className="text-sm font-bold text-foreground">AI Business Consultant</h2>
             </div>
-            <h2 className="text-lg font-bold">AI Business Consultant</h2>
+            <Badge variant="outline" className="text-[10px] font-bold text-emerald-600 border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-500/5">
+              Live
+            </Badge>
           </div>
 
-          <p className="text-indigo-50 leading-relaxed text-sm md:text-base font-medium mb-6">
-            {insights?.summary || "Analyzing your business data to provide custom insights..."}
-          </p>
+          <div className="mb-8">
+            <p className="text-sm md:text-base text-foreground/70 leading-relaxed font-medium">
+              {insights?.summary || "Analyzing your business data to provide custom insights..."}
+            </p>
+          </div>
 
-          <div className="mt-auto flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-8 pt-6 border-t border-border/40 mt-auto">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-200">Weekly Growth</span>
-              <div className="flex items-center gap-1.5 mt-1">
-                {insights?.growth >= 0 ? <TrendingUp className="w-4 h-4 text-emerald-400" /> : <TrendingDown className="w-4 h-4 text-rose-400" />}
-                <span className="text-xl font-black">{Math.abs(insights?.growth || 0).toFixed(1)}%</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mb-1">Growth</span>
+              <div className="flex items-center gap-1.5">
+                {insights?.growth >= 0 ? <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> : <TrendingDown className="w-3.5 h-3.5 text-rose-500" />}
+                <span className="text-base font-bold text-foreground">{Math.abs(insights?.growth || 0).toFixed(1)}%</span>
               </div>
             </div>
 
-            <div className="h-10 w-px bg-white/20" />
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mb-1">Top Item</span>
+              <span className="text-sm font-bold text-foreground">
+                {insights?.topPerformer?.name || "None"}
+              </span>
+            </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-200">Top Item</span>
-              <span className="text-lg font-bold mt-1 truncate max-w-[150px]">
-                {insights?.topPerformer?.name || "N/A"}
-              </span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mb-1">Status</span>
+              <div className="flex items-center gap-1.5 text-sm font-bold text-emerald-600">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Optimized</span>
+              </div>
             </div>
           </div>
         </div>
@@ -84,50 +92,34 @@ export function AIConsultant({ profileId }: AIConsultantProps) {
 
       {/* ── Inventory Alerts ─────────────────────────── */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className={cn(
-          "bg-card rounded-2xl p-6 border-2 border-dashed transition-colors",
-          hasAlerts ? "border-rose-500/30 bg-rose-500/[0.02]" : "border-border/50"
-        )}
+        className="bg-card border border-border/50 rounded-xl p-6 shadow-sm flex flex-col h-full"
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <AlertTriangle className={cn("w-4 h-4", hasAlerts ? "text-rose-500" : "text-muted-foreground")} />
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Stock Alerts
           </h2>
-          {hasAlerts && (
-            <span className="px-2 py-0.5 bg-rose-500 text-white text-[10px] font-black rounded-full animate-pulse">
-              {forecasts.length}
-            </span>
-          )}
+          {hasAlerts && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />}
         </div>
 
-        <div className="space-y-4 max-h-[140px] overflow-y-auto custom-scrollbar pr-2">
+        <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-1">
           {forecasts.length > 0 ? (
-            forecasts.map((item, i) => (
-              <div key={item.itemId} className="flex items-center justify-between group">
+            forecasts.map((item) => (
+              <div key={item.itemId} className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold group-hover:text-rose-500 transition-colors">{item.name}</p>
-                  <p className="text-[10px] text-muted-foreground">Stock: {item.stockQuantity} {item.unit}</p>
+                  <p className="text-xs font-bold text-foreground">{item.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{item.stockQuantity} {item.unit} left</p>
                 </div>
-                <div className="text-right">
-                  <span className={cn(
-                    "text-[10px] font-bold px-2 py-1 rounded-lg",
-                    item.daysRemaining <= 1 ? "bg-rose-500 text-white" : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                  )}>
-                    {item.daysRemaining <= 0 ? "Out of Stock" : `~${item.daysRemaining} days left`}
-                  </span>
-                </div>
+                <Badge variant={item.daysRemaining <= 1 ? "destructive" : "secondary"} className="text-[9px] px-1.5 py-0">
+                  {item.daysRemaining <= 0 ? "Out" : `${item.daysRemaining}d`}
+                </Badge>
               </div>
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <div className="bg-emerald-500/10 p-3 rounded-full mb-3">
-                <Info className="w-6 h-6 text-emerald-500" />
-              </div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inventory is healthy</p>
+            <div className="flex flex-col items-center justify-center h-full text-center py-4">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Everything in stock</p>
             </div>
           )}
         </div>
