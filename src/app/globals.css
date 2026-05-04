@@ -109,19 +109,23 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   /* ── Scrollbar styling ──────────────────────────────── */
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
+    @apply bg-muted-foreground/30 rounded-full transition-colors;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground;
+    @apply bg-brand-500;
   }
 }
 
