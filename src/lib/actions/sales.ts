@@ -32,6 +32,10 @@ export async function getSales(profileId: string) {
       discount: Number(sale.discount),
       tax: Number(sale.tax),
       grandTotal: Number(sale.grandTotal),
+      party: sale.party ? {
+        ...sale.party,
+        openingBalance: Number(sale.party.openingBalance)
+      } : null,
       items: sale.items.map(item => ({
         ...item,
         rate: Number(item.rate),
@@ -151,36 +155,26 @@ export async function createSale(
           });
         }
 
-        // 3. Recalculate balance for this party (using the same logic as party.ts)
-        const party = await tx.party.findUnique({ where: { id: data.partyId } });
-        if (party) {
-            const txs = await tx.partyTransaction.findMany({
-                where: { partyId: data.partyId },
-                orderBy: { date: "asc" },
-            });
-            let balance = 0;
-            for (const t of txs) {
-                const amount = Number(t.amount);
-                if (t.type === PartyTxType.OPENING_BALANCE) {
-                    balance = party.balanceType === "TO_RECEIVE" ? amount : -amount;
-                } else if (t.type === PartyTxType.PAYMENT_IN) {
-                    balance -= amount;
-                } else if (t.type === PartyTxType.PAYMENT_OUT) {
-                    balance += amount;
-                } else if (t.type === PartyTxType.SALE) {
-                    balance += amount;
-                } else if (t.type === PartyTxType.PURCHASE) {
-                    balance -= amount;
-                }
+        // 3. Update party balance atomically
+        const delta = data.status === "PAID" ? 0 : data.grandTotal; // If PAID, net change is 0. If UNPAID, they owe more (+).
+        
+        if (delta !== 0) {
+            const party = await tx.party.findUnique({ where: { id: data.partyId } });
+            if (party) {
+                // Calculate current net balance
+                let currentBalance = party.balanceType === "TO_RECEIVE" ? Number(party.openingBalance) : -Number(party.openingBalance);
+                let newBalance = currentBalance + delta;
+                
+                const newBalanceType = newBalance > 0 ? BalanceType.TO_RECEIVE : newBalance < 0 ? BalanceType.TO_GIVE : BalanceType.SETTLED;
+                
+                await tx.party.update({
+                    where: { id: data.partyId },
+                    data: {
+                        openingBalance: Math.abs(newBalance),
+                        balanceType: newBalanceType,
+                    },
+                });
             }
-            const newBalanceType = balance > 0 ? BalanceType.TO_RECEIVE : balance < 0 ? BalanceType.TO_GIVE : BalanceType.SETTLED;
-            await tx.party.update({
-                where: { id: data.partyId },
-                data: {
-                    openingBalance: Math.abs(balance),
-                    balanceType: newBalanceType,
-                },
-            });
         }
       }
 
@@ -197,6 +191,8 @@ export async function createSale(
       });
 
       return sale;
+    }, {
+      timeout: 20000, // Increase timeout to 20 seconds to handle ledger recalculations
     });
 
     revalidatePath("/sales");
