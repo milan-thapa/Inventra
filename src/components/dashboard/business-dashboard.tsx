@@ -39,7 +39,7 @@ export function BusinessDashboard({
       <BusinessStatCards stats={stats} />
 
       {/* AI Consultant & Stock Alerts */}
-      <AIConsultant profileId={profile.id} />
+      {/* <AIConsultant profileId={profile.id} /> */}
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -51,7 +51,7 @@ export function BusinessDashboard({
         {/* Right panel */}
         <div className="space-y-4">
           <TotalBalance balance={stats.totalBalance} profileId={profile.id} />
-          
+
 
 
           <UpcomingReminders reminders={reminders} profileId={profile.id} />

@@ -19,7 +19,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Recommendations } from "@/components/sales/recommendations";
 import { ThermalReceipt } from "@/components/sales/thermal-receipt";
 import { PaymentQRModal } from "@/components/sales/payment-qr-modal";
-import { Smartphone } from "lucide-react";
+import { CheckoutSuccessModal } from "@/components/sales/checkout-success-modal";
+import { getParties } from "@/lib/actions/party";
+import { Smartphone, User, Percent, Tag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function QuickPOSPage() {
   const router = useRouter();
@@ -36,11 +40,18 @@ export default function QuickPOSPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [lastSale, setLastSale] = useState<any>(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  
+  const [parties, setParties] = useState<any[]>([]);
+  const [selectedPartyId, setSelectedPartyId] = useState<string>("CASH_CUSTOMER");
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [taxPercent, setTaxPercent] = useState(0);
 
   useEffect(() => {
     if (activeProfileId) {
       getItems(activeProfileId).then(res => res.data && setItems(res.data));
       getItemCategories(activeProfileId).then(res => res.data && setCategories(res.data));
+      getParties(activeProfileId).then(res => res.data && setParties(res.data));
     }
   }, [activeProfileId]);
 
@@ -112,7 +123,10 @@ export default function QuickPOSPage() {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * Number(item.sellingPrice)), 0);
-  const total = subtotal;
+  const discountAmount = subtotal * (discountPercent / 100);
+  const taxableAmount = subtotal - discountAmount;
+  const taxAmount = taxableAmount * (taxPercent / 100);
+  const total = taxableAmount + taxAmount;
 
   const handleCheckout = async (paymentMethod: "CASH" | "BANK") => {
     if (cart.length === 0) {
@@ -130,9 +144,10 @@ export default function QuickPOSPage() {
         amount: i.quantity * Number(i.sellingPrice)
       })),
       totalAmount: subtotal,
-      discount: 0,
-      tax: 0,
+      discount: discountAmount,
+      tax: taxAmount,
       grandTotal: total,
+      partyId: selectedPartyId === "CASH_CUSTOMER" ? undefined : selectedPartyId,
       paymentMethod,
       status: "PAID",
       date: new Date(),
@@ -145,13 +160,22 @@ export default function QuickPOSPage() {
       toast.error(res.error || "Failed to complete sale");
     } else {
       setLastSale({ ...res.data, items: cart });
-      toast.success(`POS Sale Completed! Invoice #${res.data.invoiceNo}`, {
-        description: `Total Amount: ${formatCurrency(total, profile?.currency, profile?.currencyPos as any)}`,
-        icon: <Sparkles className="w-4 h-4 text-emerald-500" />
-      });
+      setSuccessOpen(true);
       setCart([]);
       setQrOpen(false);
+      setDiscountPercent(0);
+      setTaxPercent(0);
+      setSelectedPartyId("CASH_CUSTOMER");
     }
+  };
+
+  const resetSale = () => {
+    setCart([]);
+    setLastSale(null);
+    setSuccessOpen(false);
+    setDiscountPercent(0);
+    setTaxPercent(0);
+    setSelectedPartyId("CASH_CUSTOMER");
   };
 
   const handlePrint = () => {
@@ -183,6 +207,15 @@ export default function QuickPOSPage() {
         amount={total}
         currency={profile?.currency}
         businessName={profile?.name || "Inventra POS"}
+      />
+
+      <CheckoutSuccessModal 
+        open={successOpen}
+        onClose={() => setSuccessOpen(false)}
+        onNewSale={resetSale}
+        onPrint={handlePrint}
+        saleData={lastSale}
+        currency={profile?.currency}
       />
 
       <div className="flex-1 flex overflow-hidden bg-secondary/5">
@@ -304,19 +337,24 @@ export default function QuickPOSPage() {
 
         {/* ── RIGHT: RECEIPT PANEL ─────────────────────────── */}
         <div className="w-[380px] bg-card border-l flex flex-col shadow-xl relative z-20">
-          <div className="p-5 border-b flex items-center justify-between bg-card">
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-500/10 p-2 rounded-lg">
-                <ShoppingCart className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="font-bold text-sm">Order Summary</h2>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{cart.length} items</p>
-              </div>
+          <div className="p-4 border-b space-y-3 bg-secondary/5">
+            <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Customer / Party</label>
+                <Select value={selectedPartyId} onValueChange={setSelectedPartyId}>
+                    <SelectTrigger className="h-10 bg-background border-none shadow-sm focus:ring-emerald-500 rounded-xl">
+                        <div className="flex items-center gap-2">
+                            <User className="w-3.5 h-3.5 text-emerald-600" />
+                            <SelectValue placeholder="Select Customer" />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="CASH_CUSTOMER">Cash Customer (Default)</SelectItem>
+                        {parties.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-rose-500 rounded-full" onClick={() => setCart([])}>
-                <Trash2 className="w-4 h-4" />
-            </Button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/10 custom-scrollbar">
@@ -382,10 +420,50 @@ export default function QuickPOSPage() {
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal, profile?.currency)}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground font-bold uppercase tracking-widest">
-                    <span>Tax (0%)</span>
-                    <span>{formatCurrency(0, profile?.currency)}</span>
+                
+                <div className="grid grid-cols-2 gap-4 py-2 border-y border-border/40">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 px-1">
+                            <Tag className="w-3 h-3 text-emerald-600" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Discount %</span>
+                        </div>
+                        <Input 
+                            type="number" 
+                            value={discountPercent} 
+                            onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                            className="h-8 bg-secondary/30 border-none focus-visible:ring-emerald-500 text-xs font-bold"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 px-1">
+                            <Percent className="w-3 h-3 text-emerald-600" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tax %</span>
+                        </div>
+                        <Input 
+                            type="number" 
+                            value={taxPercent} 
+                            onChange={(e) => setTaxPercent(Number(e.target.value))}
+                            className="h-8 bg-secondary/30 border-none focus-visible:ring-emerald-500 text-xs font-bold"
+                        />
+                    </div>
                 </div>
+                
+                {(discountAmount > 0 || taxAmount > 0) && (
+                    <div className="space-y-1.5 pt-1">
+                        {discountAmount > 0 && (
+                            <div className="flex items-center justify-between text-[10px] font-bold text-rose-500 uppercase tracking-widest">
+                                <span>Discount Applied</span>
+                                <span>-{formatCurrency(discountAmount, profile?.currency)}</span>
+                            </div>
+                        )}
+                        {taxAmount > 0 && (
+                            <div className="flex items-center justify-between text-[10px] font-bold text-amber-600 uppercase tracking-widest">
+                                <span>Tax Applied</span>
+                                <span>+{formatCurrency(taxAmount, profile?.currency)}</span>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="p-5 bg-secondary/30 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center gap-1">
