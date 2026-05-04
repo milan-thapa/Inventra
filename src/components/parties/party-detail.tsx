@@ -97,10 +97,10 @@ export function PartyDetail({
         {/* Party header */}
         <div className="flex items-start justify-between p-5 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white",
-              getAvatarColor(party.name)
-            )}>
+            <div 
+              className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white border border-border/10 shadow-sm"
+              style={{ backgroundColor: getAvatarColor(party.name) }}
+            >
               {getInitials(party.name)}
             </div>
             <div>

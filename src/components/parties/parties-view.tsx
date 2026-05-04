@@ -141,7 +141,7 @@ export function PartiesView({
         <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-              <Users className="w-10 h-10 text-muted-foreground/30 mb-2" />
+              <Users className="w-10 h-10 text-muted-foreground/50 mb-2" />
               <p className="text-sm font-medium text-foreground mb-1">
                 {parties.length === 0 ? "Let's add your First Party" : "No parties found"}
               </p>

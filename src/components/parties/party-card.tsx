@@ -28,20 +28,24 @@ export function PartyCard({
     <div
       onClick={onClick}
       className={cn(
-        "bg-card rounded-xl border p-3.5 flex items-center gap-3 hover:border-emerald-500/50 transition-colors cursor-pointer",
-        isSelected ? "border-emerald-500/70 bg-emerald-500/5" : "border-border/50"
+        "bg-card rounded-xl p-3.5 flex items-center gap-3 transition-all cursor-pointer border border-transparent",
+        isSelected 
+          ? "bg-secondary shadow-sm" 
+          : "hover:bg-secondary/50"
       )}
     >
-      <div className={cn(
-        "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0",
-        getAvatarColor(party.name)
-      )}>
+      <div 
+        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 border border-border/10 shadow-sm"
+        style={{ backgroundColor: getAvatarColor(party.name) }}
+      >
         {getInitials(party.name)}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{party.name}</p>
+        <p className="text-sm font-bold text-foreground truncate transition-colors">
+          {party.name}
+        </p>
         {party.address && (
-          <p className="text-xs text-muted-foreground truncate">{party.address}</p>
+          <p className="text-[10px] text-muted-foreground truncate opacity-80">{party.address}</p>
         )}
       </div>
       <div className="text-right flex-shrink-0">

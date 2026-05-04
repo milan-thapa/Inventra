@@ -89,7 +89,7 @@ export function BusinessStatCards({ stats }: BusinessStatCardsProps) {
               <card.icon className={cn("w-5 h-5", card.color)} />
             </div>
           </div>
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-foreground/60 dark:text-muted-foreground/60 mb-1 relative z-10">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-foreground/80 dark:text-muted-foreground/70 mb-1 relative z-10">
             {card.title}
           </h3>
           <p className={cn("text-2xl font-bold tracking-tight relative z-10", card.color)}>
