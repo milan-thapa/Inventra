@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useProfileStore } from "@/stores/profile-store";
 
 interface Stats {
   income: number;
@@ -21,8 +22,8 @@ const CARDS = [
     label: (month: string) => `Income (${month})`,
     icon:  TrendingUp,
     cardClass: "stat-card-income",
-    iconClass: "text-emerald-400",
-    valueClass: "text-emerald-300",
+    iconClass: "text-emerald-600 dark:text-emerald-400",
+    valueClass: "text-emerald-700 dark:text-emerald-300",
     arrowUp: true,
   },
   {
@@ -30,17 +31,17 @@ const CARDS = [
     label: (month: string) => `Expense (${month})`,
     icon:  TrendingDown,
     cardClass: "stat-card-expense",
-    iconClass: "text-rose-400",
-    valueClass: "text-rose-300",
-    arrowUp: true,
+    iconClass: "text-rose-600 dark:text-rose-400",
+    valueClass: "text-rose-700 dark:text-rose-300",
+    arrowUp: false,
   },
   {
     key:   "toReceive" as keyof Stats,
     label: () => "To Receive",
     icon:  ArrowDownLeft,
     cardClass: "stat-card-receive",
-    iconClass: "text-teal-400",
-    valueClass: "text-teal-300",
+    iconClass: "text-teal-600 dark:text-teal-400",
+    valueClass: "text-teal-700 dark:text-teal-300",
     arrowUp: false,
   },
   {
@@ -48,13 +49,16 @@ const CARDS = [
     label: () => "To Give",
     icon:  ArrowUpRight,
     cardClass: "stat-card-give",
-    iconClass: "text-rose-400",
-    valueClass: "text-rose-300",
+    iconClass: "text-rose-600 dark:text-rose-400",
+    valueClass: "text-rose-700 dark:text-rose-300",
     arrowUp: true,
   },
 ];
 
 export function StatCards({ stats }: { stats: Stats }) {
+  const { getActiveProfile } = useProfileStore();
+  const profile = getActiveProfile();
+  
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {CARDS.map((card, i) => {
@@ -75,7 +79,7 @@ export function StatCards({ stats }: { stats: Stats }) {
             )}
           >
             {/* Subtle light streak on hover */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             
             <div className="flex items-center justify-between mb-2 relative z-10">
               <div className={cn(
@@ -94,11 +98,11 @@ export function StatCards({ stats }: { stats: Stats }) {
                 }
               </div>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 truncate relative z-10">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-muted-foreground mb-1 truncate relative z-10">
               {card.label(stats.currentMonth)}
             </p>
             <p className={cn("text-xl font-bold tracking-tight relative z-10", card.valueClass)}>
-              {formatCurrency(value)}
+              {formatCurrency(value, profile?.currency, profile?.currencyPos as any)}
             </p>
           </motion.div>
         );
