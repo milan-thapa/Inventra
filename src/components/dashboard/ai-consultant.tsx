@@ -39,7 +39,7 @@ export function AIConsultant({ profileId }: AIConsultantProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* ── Insights Panel ───────────────────────────── */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="lg:col-span-3 bg-card border border-border/50 rounded-xl p-6 shadow-sm"
@@ -91,7 +91,7 @@ export function AIConsultant({ profileId }: AIConsultantProps) {
       </motion.div>
 
       {/* ── Inventory Alerts ─────────────────────────── */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
