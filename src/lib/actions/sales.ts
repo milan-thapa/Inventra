@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { PartyTxType, TransactionType, BalanceType, PaymentMethod } from "@prisma/client";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -82,7 +83,7 @@ export async function createSale(
           discount: data.discount,
           tax: data.tax,
           grandTotal: data.grandTotal,
-          paymentMethod: data.paymentMethod,
+          paymentMethod: data.paymentMethod as PaymentMethod,
           status: data.status,
           remarks: data.remarks,
           date: data.date,
@@ -115,7 +116,7 @@ export async function createSale(
       // Record in Party Ledger if customer is selected
       if (data.partyId) {
         const lastPartyTx = await tx.partyTransaction.findFirst({
-            where: { profileId, type: "SALE" },
+            where: { profileId, type: PartyTxType.SALE },
             orderBy: { receiptNumber: "desc" },
         });
         const nextReceiptNo = (lastPartyTx?.receiptNumber ?? 0) + 1;
@@ -126,9 +127,9 @@ export async function createSale(
             partyId: data.partyId,
             profileId,
             receiptNumber: nextReceiptNo,
-            type: "SALE",
+            type: PartyTxType.SALE,
             amount: data.grandTotal,
-            paymentMethod: data.paymentMethod,
+            paymentMethod: data.paymentMethod as PaymentMethod,
             remarks: `Sale Invoice #${invoiceNo}`,
             date: data.date,
           },
@@ -141,9 +142,9 @@ export async function createSale(
               partyId: data.partyId,
               profileId,
               receiptNumber: nextReceiptNo + 1,
-              type: "PAYMENT_IN",
+              type: PartyTxType.PAYMENT_IN,
               amount: data.grandTotal,
-              paymentMethod: data.paymentMethod,
+              paymentMethod: data.paymentMethod as PaymentMethod,
               remarks: `Payment for Invoice #${invoiceNo}`,
               date: data.date,
             },
@@ -160,19 +161,19 @@ export async function createSale(
             let balance = 0;
             for (const t of txs) {
                 const amount = Number(t.amount);
-                if (t.type === "OPENING_BALANCE") {
+                if (t.type === PartyTxType.OPENING_BALANCE) {
                     balance = party.balanceType === "TO_RECEIVE" ? amount : -amount;
-                } else if (t.type === "PAYMENT_IN") {
+                } else if (t.type === PartyTxType.PAYMENT_IN) {
                     balance -= amount;
-                } else if (t.type === "PAYMENT_OUT") {
+                } else if (t.type === PartyTxType.PAYMENT_OUT) {
                     balance += amount;
-                } else if (t.type === "SALE") {
+                } else if (t.type === PartyTxType.SALE) {
                     balance += amount;
-                } else if (t.type === "PURCHASE") {
+                } else if (t.type === PartyTxType.PURCHASE) {
                     balance -= amount;
                 }
             }
-            const newBalanceType = balance > 0 ? "TO_RECEIVE" : balance < 0 ? "TO_GIVE" : "SETTLED";
+            const newBalanceType = balance > 0 ? BalanceType.TO_RECEIVE : balance < 0 ? BalanceType.TO_GIVE : BalanceType.SETTLED;
             await tx.party.update({
                 where: { id: data.partyId },
                 data: {
@@ -187,7 +188,7 @@ export async function createSale(
       await tx.transaction.create({
         data: {
           profileId,
-          type: "SALE",
+          type: TransactionType.SALE,
           referenceId: sale.id,
           amount: data.grandTotal,
           description: `Sale Invoice #${invoiceNo}`,
