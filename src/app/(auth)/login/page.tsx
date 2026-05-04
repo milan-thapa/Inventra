@@ -21,11 +21,11 @@ const CAROUSEL_SLIDES = [
     icon: BarChart3,
     title: "Insightful Business Reports",
     description: "Make better business decisions with your business performance report.",
-    color: "from-emerald-600/20 to-emerald-900/40",
+    color: "from-brand-600/20 to-brand-900/40",
   },
   {
     icon: Monitor,
-    title: "Manage Business From All Device",
+    title: "Multi-Device Management",
     description: "Manage your business accounting & inventory easily from your laptop & mobile.",
     color: "from-blue-600/20 to-blue-900/40",
   },
@@ -115,30 +115,37 @@ function LoginContent() {
   const SlideIcon = slide.icon;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl bg-[#1a1f2e] rounded-2xl overflow-hidden shadow-2xl flex min-h-[580px]">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#0f172a] relative overflow-hidden">
+      {/* Background patterns */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-600 rounded-full blur-[120px] opacity-10" />
+        <div className="absolute bottom-[10%] left-[-10%] w-[400px] h-[400px] bg-blue-600 rounded-full blur-[120px] opacity-10" />
+      </div>
+
+      <div className="w-full max-w-5xl bg-[#1e293b]/50 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl flex min-h-[620px] relative z-10">
 
         {/* ── LEFT: Login Form ─────────────────────────────── */}
         <div className="w-full md:w-5/12 p-8 flex flex-col">
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-emerald-600 rounded flex items-center justify-center">
-                <BarChart3 className="w-4 h-4 text-white" />
+          <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-600/20">
+                <BarChart3 className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-white text-lg">{APP_NAME}</span>
+              <span className="font-bold text-white text-xl tracking-tight">{APP_NAME}</span>
             </div>
 
             {/* Language Switcher */}
             <div className="relative">
               <button
                 onClick={() => setShowLangMenu(!showLangMenu)}
-                className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white bg-[#252c3e] px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full transition-all border border-white/5"
               >
                 <span>{currentLang.flag}</span>
-                <span>{currentLang.label}</span>
-                <ChevronRight className="w-3 h-3 rotate-90" />
+                <span>{currentLang.code}</span>
+                <ChevronRight className={`w-3 h-3 transition-transform ${showLangMenu ? "rotate-[-90deg]" : "rotate-90"}`} />
               </button>
 
               {showLangMenu && (
@@ -195,18 +202,20 @@ function LoginContent() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <h2 className="text-2xl font-bold text-white mb-1">Let&apos;s Get Started</h2>
-                  <p className="text-gray-400 text-sm mb-7">
-                    {lang === "en" ? "Please Login to Continue" : "जारी राख्न लगइन गर्नुहोस्"}
+                  <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Welcome Back</h2>
+                  <p className="text-gray-400 text-sm mb-10 leading-relaxed">
+                    {lang === "en" 
+                      ? "Log in to your Inventra account to manage your business." 
+                      : "तपाईंको व्यवसाय व्यवस्थापन गर्न इन्भेन्ट्रा खातामा लगइन गर्नुहोस्।"}
                   </p>
 
                   {/* OAuth Buttons */}
                   {!isEmailMode && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <Button
                         onClick={() => handleOAuth("google")}
                         disabled={!!loading}
-                        className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold h-11 gap-3"
+                        className="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold h-12 gap-3 rounded-xl transition-all shadow-lg hover:shadow-white/5 active:scale-[0.98]"
                       >
                         {loading === "google" ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -225,7 +234,7 @@ function LoginContent() {
                         onClick={() => handleOAuth("github")}
                         disabled={!!loading}
                         variant="outline"
-                        className="w-full border-[#353d52] bg-[#252c3e] hover:bg-[#2e3650] text-white h-11 gap-3"
+                        className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold h-12 gap-3 rounded-xl transition-all active:scale-[0.98]"
                       >
                         {loading === "github" ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -235,19 +244,19 @@ function LoginContent() {
                         Continue with GitHub
                       </Button>
 
-                      <div className="flex items-center gap-3 my-4">
-                        <div className="flex-1 h-px bg-[#353d52]" />
-                        <span className="text-xs text-gray-500">or</span>
-                        <div className="flex-1 h-px bg-[#353d52]" />
+                      <div className="flex items-center gap-4 py-2">
+                        <div className="flex-1 h-px bg-white/5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">or use email</span>
+                        <div className="flex-1 h-px bg-white/5" />
                       </div>
 
                       <Button
                         variant="outline"
                         onClick={() => setIsEmailMode(true)}
-                        className="w-full border-[#353d52] bg-[#252c3e] hover:bg-[#2e3650] text-gray-300 h-11 gap-3"
+                        className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 font-bold h-12 gap-3 rounded-xl transition-all active:scale-[0.98]"
                       >
-                        <Mail className="w-4 h-4" />
-                        Continue with Email
+                        <Mail className="w-4 h-4 text-brand-500" />
+                        Sign in with magic link
                       </Button>
                     </div>
                   )}
@@ -261,7 +270,7 @@ function LoginContent() {
                       className="space-y-4"
                     >
                       <div>
-                        <Label htmlFor="email" className="text-gray-300 text-sm mb-1.5 block">
+                        <Label htmlFor="email" className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2 block">
                           Email Address
                         </Label>
                         <Input
@@ -270,7 +279,7 @@ function LoginContent() {
                           placeholder="you@example.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="bg-[#252c3e] border-[#353d52] text-white placeholder:text-gray-500 h-11 focus:border-emerald-500 focus:ring-emerald-500/20"
+                          className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 h-12 rounded-xl focus:border-brand-500 focus:ring-brand-500/20 transition-all"
                           required
                         />
                       </div>
@@ -278,7 +287,7 @@ function LoginContent() {
                       <Button
                         type="submit"
                         disabled={!!loading || !email}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 font-semibold"
+                        className="w-full bg-brand-600 hover:bg-brand-700 text-white h-12 font-bold rounded-xl shadow-lg shadow-brand-600/20 active:scale-[0.98] transition-all"
                       >
                         {loading === "email" ? (
                           <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending...</>
@@ -290,7 +299,7 @@ function LoginContent() {
                       <button
                         type="button"
                         onClick={() => setIsEmailMode(false)}
-                        className="w-full text-center text-sm text-gray-400 hover:text-gray-300 transition-colors pt-1"
+                        className="w-full text-center text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors pt-2"
                       >
                         ← Back to other options
                       </button>
@@ -301,59 +310,58 @@ function LoginContent() {
             </AnimatePresence>
           </div>
 
-          <p className="text-xs text-gray-600 text-center mt-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600 text-center mt-6">
             By continuing, you agree to our{" "}
-            <a href="/terms" className="text-emerald-600 hover:underline">Terms</a>
+            <a href="/terms" className="text-brand-500 hover:text-brand-400">Terms</a>
             {" "}and{" "}
-            <a href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</a>
+            <a href="/privacy" className="text-brand-500 hover:text-brand-400">Privacy Policy</a>
           </p>
         </div>
 
         {/* ── RIGHT: Carousel ───────────────────────────────── */}
-        <div className={`hidden md:flex md:w-7/12 bg-gradient-to-br ${slide.color} flex-col items-center justify-center p-10 relative overflow-hidden`}>
-
-          {/* Background decoration */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="absolute top-10 right-10 w-40 h-40 rounded-full bg-white" />
-            <div className="absolute bottom-10 left-10 w-24 h-24 rounded-full bg-white" />
-          </div>
+        <div className={`hidden md:flex md:w-7/12 bg-gradient-to-br ${slide.color} flex-col items-center justify-center p-12 relative overflow-hidden`}>
+          
+          {/* Decorative background circle */}
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -mr-64 -mt-64" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-500/10 rounded-full blur-3xl -ml-48 -mb-48" />
 
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlide}
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              transition={{ duration: 0.4 }}
-              className="text-center relative z-10"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 1.05, y: -20 }}
+              transition={{ duration: 0.5, ease: "circOut" }}
+              className="text-center relative z-10 w-full max-w-sm"
             >
               {/* Icon */}
-              <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/20">
+              <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-[2rem] flex items-center justify-center mx-auto mb-10 border border-white/10 shadow-2xl">
                 <SlideIcon className="w-10 h-10 text-white" />
               </div>
 
-              {/* Dashboard mockup */}
-              <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 mb-6 border border-white/10 mx-auto max-w-xs">
-                <div className="flex gap-1 mb-2">
-                  <div className="w-2 h-2 rounded-full bg-red-400/70" />
-                  <div className="w-2 h-2 rounded-full bg-yellow-400/70" />
-                  <div className="w-2 h-2 rounded-full bg-green-400/70" />
+              {/* Enhanced Dashboard mockup */}
+              <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl p-4 mb-10 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] transform -rotate-2">
+                <div className="flex gap-1.5 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-red-400/50" />
+                  <div className="w-2 h-2 rounded-full bg-yellow-400/50" />
+                  <div className="w-2 h-2 rounded-full bg-green-400/50" />
                 </div>
-                <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-8 rounded bg-white/10" />
-                  ))}
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="h-10 rounded-lg bg-white/5" />
+                  <div className="h-10 rounded-lg bg-white/5" />
                 </div>
-                <div className="h-16 rounded bg-white/10 mb-1.5" />
-                <div className="grid grid-cols-3 gap-1">
+                <div className="h-20 rounded-lg bg-brand-500/10 border border-brand-500/10 mb-2 flex items-center justify-center">
+                   <div className="w-1/2 h-2 bg-brand-500/20 rounded-full" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-4 rounded bg-white/10" />
+                    <div key={i} className="h-6 rounded-lg bg-white/5" />
                   ))}
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-white mb-2">{slide.title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed max-w-xs mx-auto">
+              <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">{slide.title}</h3>
+              <p className="text-white/60 text-base leading-relaxed">
                 {slide.description}
               </p>
             </motion.div>
