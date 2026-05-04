@@ -88,7 +88,7 @@ export async function createSale(
           date: data.date,
           items: {
             create: data.items.map((item) => ({
-              itemId: item.itemId,
+              itemId: item.itemId || null,
               name: item.name,
               quantity: item.quantity,
               rate: item.rate,

@@ -159,9 +159,15 @@ export function formatBsDate(date: Date): string {
 
 // ── Avatar initials + color ───────────────────────────────
 const AVATAR_COLORS = [
-  "bg-emerald-600", "bg-blue-600", "bg-purple-600",
-  "bg-orange-600", "bg-pink-600", "bg-teal-600",
-  "bg-red-600", "bg-indigo-600", "bg-yellow-600",
+  "#059669", // emerald-600
+  "#2563eb", // blue-600
+  "#7c3aed", // purple-600
+  "#ea580c", // orange-600
+  "#db2777", // pink-600
+  "#0d9488", // teal-600
+  "#dc2626", // red-600
+  "#4f46e5", // indigo-600
+  "#ca8a04", // yellow-600
 ];
 
 export function getInitials(name: string): string {

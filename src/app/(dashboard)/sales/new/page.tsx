@@ -81,7 +81,10 @@ export default function AddSalePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!activeProfileId) return;
+    if (!activeProfileId) {
+      toast.error("No active profile found. Please select or create a profile first.");
+      return;
+    }
     
     // Validation
     const validItems = lineItems.filter(i => i.name && i.quantity > 0 && i.rate >= 0);
@@ -111,6 +114,7 @@ export default function AddSalePage() {
       toast.error(res.error);
     } else {
       toast.success("Sale invoice created successfully");
+      router.refresh(); // Refresh the page data
       router.push("/sales");
     }
   }

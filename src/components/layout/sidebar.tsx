@@ -59,6 +59,8 @@ interface Profile {
   name: string;
   type: string;
   category?: string | null;
+  logo?: string | null;
+  isDefault?: boolean;
 }
 
 export function Sidebar() {
@@ -115,7 +117,10 @@ export function Sidebar() {
         {/* ── Top bar: Logo only (hamburger lives in header) ── */}
         <div className="h-14 flex items-center px-4 border-b border-border/50 flex-shrink-0">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-emerald-600 rounded flex items-center justify-center flex-shrink-0">
+            <div 
+              className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-900/20"
+              style={{ backgroundColor: '#059669' }}
+            >
               <BarChart3 className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="font-bold text-sm text-foreground">{APP_NAME}</span>
@@ -130,12 +135,16 @@ export function Sidebar() {
           >
             {activeProfile ? (
               <>
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0",
-                  getAvatarColor(activeProfile.name)
-                )}>
-                  {getInitials(activeProfile.name)}
-                </div>
+                {activeProfile.logo ? (
+                  <img src={activeProfile.logo} alt="" className="w-8 h-8 rounded-full object-cover border border-border/20 shadow-sm flex-shrink-0" />
+                ) : (
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 border border-border/10 shadow-sm"
+                    style={{ backgroundColor: getAvatarColor(activeProfile.name) }}
+                  >
+                    {getInitials(activeProfile.name)}
+                  </div>
+                )}
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
                     {activeProfile.name}
@@ -170,12 +179,16 @@ export function Sidebar() {
                       onClick={() => handleSwitchProfile(profile.id)}
                       className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-accent transition-colors text-sm"
                     >
-                      <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white",
-                        getAvatarColor(profile.name)
-                      )}>
-                        {getInitials(profile.name)}
-                      </div>
+                      {profile.logo ? (
+                        <img src={profile.logo} alt="" className="w-6 h-6 rounded-full object-cover border border-border/20 shadow-sm flex-shrink-0" />
+                      ) : (
+                        <div 
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white border border-border/10 shadow-sm"
+                          style={{ backgroundColor: getAvatarColor(profile.name) }}
+                        >
+                          {getInitials(profile.name)}
+                        </div>
+                      )}
                       <span className="flex-1 text-left text-foreground truncate">
                         {profile.name}
                       </span>
