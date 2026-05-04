@@ -19,6 +19,9 @@ const nextConfig = {
       { protocol: "https", hostname: "uploadthing.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      { protocol: "https", hostname: "esewa.com.np" },
+      { protocol: "https", hostname: "khalti.com" },
+      { protocol: "https", hostname: "api.qrserver.com" },
     ],
   },
 };

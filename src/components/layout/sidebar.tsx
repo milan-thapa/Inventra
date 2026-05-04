@@ -16,6 +16,7 @@ import { useUIStore } from "@/stores/profile-store";
 import { useProfileStore } from "@/stores/profile-store";
 import { getProfiles, switchProfile } from "@/lib/actions/profile";
 import { APP_NAME } from "@/lib/constants";
+import Image from "next/image";
 
 const PERSONAL_NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -136,7 +137,7 @@ export function Sidebar() {
             {activeProfile ? (
               <>
                 {activeProfile.logo ? (
-                  <img src={activeProfile.logo} alt="" className="w-8 h-8 rounded-full object-cover border border-border/20 shadow-sm flex-shrink-0" />
+                  <Image src={activeProfile.logo} alt={activeProfile.name} width={32} height={32} className="w-8 h-8 rounded-full object-cover border border-border/20 shadow-sm flex-shrink-0" />
                 ) : (
                   <div 
                     className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 border border-border/10 shadow-sm"
@@ -180,7 +181,7 @@ export function Sidebar() {
                       className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-accent transition-colors text-sm"
                     >
                       {profile.logo ? (
-                        <img src={profile.logo} alt="" className="w-6 h-6 rounded-full object-cover border border-border/20 shadow-sm flex-shrink-0" />
+                        <Image src={profile.logo} alt={profile.name} width={24} height={24} className="w-6 h-6 rounded-full object-cover border border-border/20 shadow-sm flex-shrink-0" />
                       ) : (
                         <div 
                           className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white border border-border/10 shadow-sm"

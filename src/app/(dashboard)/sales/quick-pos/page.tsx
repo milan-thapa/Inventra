@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Plus, Minus, Trash2, Search, ShoppingCart, 
@@ -64,7 +64,7 @@ export default function QuickPOSPage() {
     };
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [search, items]);
+  }, [search, items, addToCart]);
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -73,7 +73,7 @@ export default function QuickPOSPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (item: any) => {
+  const addToCart = useCallback((item: any) => {
     if (item.stockQuantity <= 0) {
         toast.error(`Out of stock: ${item.name}`);
         return;
@@ -84,13 +84,13 @@ export default function QuickPOSPage() {
         toast.warning("Cannot add more than available stock");
         return;
       }
-      setCart(cart.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
+      setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
-      setCart([{ ...item, quantity: 1 }, ...cart]);
+      setCart(prev => [{ ...item, quantity: 1 }, ...prev]);
     }
     setSearch("");
     searchInputRef.current?.focus();
-  };
+  }, [cart]);
 
   const updateQuantity = (id: string, delta: number) => {
     setCart(cart.map(i => {
