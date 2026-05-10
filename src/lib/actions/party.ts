@@ -295,8 +295,8 @@ export async function addPaymentOut(profileId: string, input: AddPaymentInInput)
 }
 
 // ── Recalculate party balance ─────────────────────────────
-async function recalculatePartyBalance(
-  tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
+export async function recalculatePartyBalance(
+  tx: any,
   partyId: string
 ) {
   const party = await tx.party.findUnique({ where: { id: partyId } });

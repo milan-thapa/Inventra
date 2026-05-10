@@ -3,6 +3,8 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { PartyTxType, TransactionType, BalanceType, PaymentMethod } from "@prisma/client";
+import { recalculatePartyBalance } from "./party";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -54,7 +56,8 @@ export async function createPurchase(
     discount: number;
     tax: number;
     grandTotal: number;
-    paymentMethod: "CASH" | "BANK";
+    receivedAmount?: number; // For purchases, this is "Paid Amount"
+    paymentMethod: string;
     status: string;
     remarks?: string;
     date: Date;
@@ -82,7 +85,7 @@ export async function createPurchase(
           discount: data.discount,
           tax: data.tax,
           grandTotal: data.grandTotal,
-          paymentMethod: data.paymentMethod,
+          paymentMethod: data.paymentMethod as PaymentMethod,
           status: data.status,
           remarks: data.remarks,
           date: data.date,
@@ -112,14 +115,55 @@ export async function createPurchase(
         }
       }
       
-      // Optionally update party balances (TO_GIVE) if it's UNPAID/PARTIAL
-      // Simplified for now: just recording the purchase
+      // Record in Party Ledger if supplier is selected
+      if (data.partyId) {
+        const lastPartyTx = await tx.partyTransaction.findFirst({
+          where: { profileId, type: PartyTxType.PURCHASE },
+          orderBy: { receiptNumber: "desc" },
+        });
+        const nextReceiptNo = (lastPartyTx?.receiptNumber ?? 0) + 1;
+
+        // 1. Record the Purchase itself
+        await tx.partyTransaction.create({
+          data: {
+            partyId: data.partyId,
+            profileId,
+            receiptNumber: nextReceiptNo,
+            type: PartyTxType.PURCHASE,
+            amount: data.grandTotal,
+            paymentMethod: data.paymentMethod as PaymentMethod,
+            remarks: `Purchase Bill #${billNo}`,
+            date: data.date,
+          },
+        });
+
+        // 2. Record Payment Out if any amount was paid
+        const paid = data.receivedAmount || (data.status === "PAID" ? data.grandTotal : 0);
+        
+        if (paid > 0) {
+          await tx.partyTransaction.create({
+            data: {
+              partyId: data.partyId,
+              profileId,
+              receiptNumber: nextReceiptNo + 1,
+              type: PartyTxType.PAYMENT_OUT,
+              amount: paid,
+              paymentMethod: data.paymentMethod as PaymentMethod,
+              remarks: `Payment for Bill #${billNo}`,
+              date: data.date,
+            },
+          });
+        }
+
+        // 3. Recalculate balance properly
+        await recalculatePartyBalance(tx, data.partyId);
+      }
 
       // Create a unified transaction record for the ledger
       await tx.transaction.create({
         data: {
           profileId,
-          type: "EXPENSE", // Or maybe create a new TransactionType like PURCHASE
+          type: TransactionType.PURCHASE,
           referenceId: purchase.id,
           amount: data.grandTotal,
           description: `Purchase Bill #${billNo}`,
@@ -132,6 +176,9 @@ export async function createPurchase(
 
     revalidatePath("/purchase");
     revalidatePath("/dashboard");
+    revalidatePath("/inventory");
+    revalidatePath("/parties");
+    if (data.partyId) revalidatePath(`/parties/${data.partyId}`);
     return { 
       data: {
         ...result,

@@ -44,6 +44,8 @@ export async function createItem(
     sellingPrice: number;
     stockQuantity: number;
     unit?: string;
+    type?: string;
+    description?: string;
     categoryId?: string;
   }
 ) {
@@ -60,6 +62,8 @@ export async function createItem(
         sellingPrice: data.sellingPrice,
         stockQuantity: data.stockQuantity,
         unit: data.unit,
+        type: data.type || "PRODUCT",
+        description: data.description,
         categoryId: data.categoryId,
       },
     });
@@ -105,6 +109,8 @@ export async function updateItem(
     sellingPrice?: number;
     stockQuantity?: number;
     unit?: string;
+    type?: string;
+    description?: string;
     categoryId?: string;
   }
 ) {
@@ -121,6 +127,8 @@ export async function updateItem(
         sellingPrice: data.sellingPrice,
         stockQuantity: data.stockQuantity,
         unit: data.unit,
+        type: data.type,
+        description: data.description,
         categoryId: data.categoryId,
       },
     });
