@@ -3,6 +3,9 @@
 import { Navbar } from "./Navbar";
 import { Hero } from "./Hero";
 import { Features } from "./Features";
+import { About } from "./About";
+import { Pricing } from "./Pricing";
+import { Contact } from "./Contact";
 import { CTASection } from "./CTASection";
 import { Footer } from "./Footer";
 
@@ -13,7 +16,9 @@ export default function LandingPage() {
       <main>
         <Hero />
         <Features />
-        {/* Placeholder for other sections like Testimonials or Pricing if needed later */}
+        <About />
+        <Pricing />
+        <Contact />
         <CTASection />
       </main>
       <Footer />

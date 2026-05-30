@@ -75,7 +75,7 @@ export function Navbar() {
 
           {/* Mobile Menu Toggle */}
           <button
-            className="md:hidden p-2 text-gray-600"
+            className="md:hidden p-2 text-gray-600 focus:outline-none focus-visible:outline-none active:bg-transparent"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X /> : <Menu />}

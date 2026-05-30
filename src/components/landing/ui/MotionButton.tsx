@@ -14,10 +14,10 @@ interface MotionButtonProps extends HTMLMotionProps<"button"> {
 export const MotionButton = React.forwardRef<HTMLButtonElement, MotionButtonProps>(
   ({ variant = "primary", size = "md", className, children, ...props }, ref) => {
     const variants = {
-      primary: "bg-brand-600 text-white shadow-md shadow-brand-500/20",
-      secondary: "bg-white text-gray-900 border border-gray-200 shadow-sm",
-      outline: "bg-transparent text-gray-700 border border-gray-200",
-      ghost: "bg-transparent text-gray-600 hover:bg-gray-50",
+      primary: "bg-brand-600 text-white shadow-md shadow-brand-500/20 hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-500/30",
+      secondary: "bg-white text-gray-900 border border-gray-200 shadow-sm hover:bg-gray-50 hover:shadow-md",
+      outline: "bg-transparent text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300",
+      ghost: "bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900",
     };
 
     const sizes = {
@@ -35,7 +35,7 @@ export const MotionButton = React.forwardRef<HTMLButtonElement, MotionButtonProp
         }}
         whileTap={{ scale: 0.98 }}
         className={cn(
-          "relative overflow-hidden inline-flex items-center justify-center rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-brand-500/20",
+          "relative overflow-hidden inline-flex items-center justify-center rounded-xl transition-all duration-200 focus:outline-none focus-visible:outline-none",
           variants[variant],
           sizes[size],
           className
