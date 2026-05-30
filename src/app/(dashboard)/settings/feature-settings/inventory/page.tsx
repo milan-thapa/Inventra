@@ -609,7 +609,7 @@ export default function InventoryFeatureSettingsPage() {
                     </p>
                   </div>
                   <Switch
-                    checked={settings.display[item.key as keyof typeof settings.display]}
+                    checked={!!settings.display[item.key as keyof typeof settings.display]}
                     onCheckedChange={(checked) =>
                       handleSettingChange("display", item.key, checked)
                     }
