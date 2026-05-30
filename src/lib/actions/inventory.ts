@@ -306,7 +306,7 @@ export async function adjustStock(
     // Run transaction to ensure atomicity
     const [updatedItem, movement] = await db.$transaction([
       db.item.update({
-        where: { id: itemId },
+        where: { id: itemId, profileId },
         data: updateData
       }),
       db.stockMovement.create({

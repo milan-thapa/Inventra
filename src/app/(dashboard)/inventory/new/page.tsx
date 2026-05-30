@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Package, DollarSign, Hash, Box, Info, X, Ruler } from "lucide-react";
+import {
+  ArrowLeft, Settings, X, ChevronRight,
+  ToggleLeft, ToggleRight, AlertTriangle
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,404 +23,464 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
-const COMMON_PRIMARY_UNITS = [
-  "Pieces (PCS)", "Box", "Carton", "Kilogram (kg)", "Gram (g)", 
-  "Liter (L)", "Milliliter (mL)", "Pack", "Set", "Pair", "Dozen", 
-  "Meter (m)", "Centimeter (cm)", "Unit"
+// ─── Common units ─────────────────────────────────────────────────────────────
+const UNITS = [
+  "PCS", "Box", "Carton", "Kilogram (kg)", "Gram (g)",
+  "Liter (L)", "Milliliter (mL)", "Pack", "Set", "Pair",
+  "Dozen", "Meter (m)", "Centimeter (cm)", "Unit",
 ];
 
-const ITEM_TYPES = [
-  { value: "PRODUCT", label: "Product" },
-  { value: "SERVICE", label: "Service" }
-];
+// ─── Measuring Unit Modal ─────────────────────────────────────────────────────
+function MeasuringUnitModal({
+  open,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (unit: string) => void;
+}) {
+  const [primary, setPrimary] = useState("PCS");
+  const [secondary, setSecondary] = useState("");
+  const [rate, setRate] = useState("");
 
+  const handleSave = () => {
+    if (!primary) { toast.error("Primary unit is required"); return; }
+    let display = primary;
+    if (secondary && rate) {
+      display = `${primary} (1 ${primary} = ${rate} ${secondary})`;
+    }
+    onSave(display);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm p-0 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+          <DialogTitle className="text-sm font-bold text-gray-900 dark:text-white">
+            Select Measuring Unit
+          </DialogTitle>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {/* Primary */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              Primary Unit
+            </Label>
+            <select
+              value={primary}
+              onChange={(e) => setPrimary(e.target.value)}
+              className="w-full h-10 px-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="">e.g. Kilogram</option>
+              {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+
+          {/* Secondary */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              Secondary Unit
+            </Label>
+            <select
+              value={secondary}
+              onChange={(e) => setSecondary(e.target.value)}
+              className="w-full h-10 px-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="">e.g. Gram</option>
+              {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+
+          {/* Conversion Rate */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              Conversion Rate
+            </Label>
+            <Input
+              type="number"
+              placeholder="e.g. 1"
+              className="h-10 text-sm"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+              disabled={!secondary}
+            />
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2.5">
+          <Button variant="outline" onClick={onClose} className="h-9 text-xs">Cancel</Button>
+          <Button
+            onClick={handleSave}
+            className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            Save
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AddItemPage() {
   const router = useRouter();
   const { activeProfileId } = useProfileStore();
+
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"stock" | "others">("stock");
 
-  // Measuring Unit states
+  // Form state
+  const [name, setName] = useState("");
+  const [categoryId, setCategoryId] = useState("none");
+  const [itemType, setItemType] = useState<"PRODUCT" | "SERVICE">("PRODUCT");
+  const [openingStock, setOpeningStock] = useState("");
+  const [unit, setUnit] = useState("PCS");
+  const [salesPrice, setSalesPrice] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [lowStockAlert, setLowStockAlert] = useState(true);
+  const [lowStockQty, setLowStockQty] = useState("10");
+  const [description, setDescription] = useState("");
+  const [sku, setSku] = useState("");
+
   const [showUnitModal, setShowUnitModal] = useState(false);
-  const [primaryUnit, setPrimaryUnit] = useState("PCS");
-  const [secondaryUnit, setSecondaryUnit] = useState("");
-  const [conversionRate, setConversionRate] = useState("");
-  const [selectedUnitText, setSelectedUnitText] = useState("PCS");
 
   useEffect(() => {
     if (activeProfileId) {
-      getItemCategories(activeProfileId).then(res => res.data && setCategories(res.data));
+      getItemCategories(activeProfileId).then(
+        (r) => r.data && setCategories(r.data)
+      );
     }
   }, [activeProfileId]);
 
-  // Handle saving the measuring unit from modal
-  const handleSaveUnit = () => {
-    if (!primaryUnit) {
-      toast.error("Primary unit is required");
+  const handleAddItem = async (andNew = false) => {
+    if (!activeProfileId || !name.trim()) {
+      toast.error("Item name is required");
       return;
     }
-    
-    let displayUnit = primaryUnit;
-    if (secondaryUnit && conversionRate) {
-      displayUnit = `${primaryUnit} (1 ${primaryUnit} = ${conversionRate} ${secondaryUnit})`;
-    }
-    
-    setSelectedUnitText(displayUnit);
-    setShowUnitModal(false);
-    toast.success("Measuring unit configured successfully");
-  };
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!activeProfileId) return;
-
     setLoading(true);
-    const formData = new FormData(e.currentTarget);
-    const categoryId = formData.get("categoryId") as string;
-    
-    const data = {
-      name: formData.get("name") as string,
-      sku: formData.get("sku") as string,
-      purchasePrice: Number(formData.get("purchasePrice")) || 0,
-      sellingPrice: Number(formData.get("sellingPrice")) || 0,
-      stockQuantity: Number(formData.get("stockQuantity")) || 0,
-      unit: selectedUnitText,
-      type: formData.get("type") as string,
-      description: formData.get("description") as string,
-      categoryId: categoryId && categoryId !== "none" ? categoryId : undefined,
-    };
-
-    const res = await createItem(activeProfileId, data);
+    const res = await createItem(activeProfileId, {
+      name: name.trim(),
+      sku: sku || undefined,
+      purchasePrice: parseFloat(purchasePrice) || 0,
+      sellingPrice: parseFloat(salesPrice) || 0,
+      stockQuantity: parseInt(openingStock) || 0,
+      unit,
+      type: itemType,
+      description: description || undefined,
+      categoryId: categoryId !== "none" ? categoryId : undefined,
+      reorderPoint: lowStockAlert ? parseInt(lowStockQty) || 10 : undefined,
+    });
     setLoading(false);
 
     if (res.error) {
       toast.error(res.error);
     } else {
       toast.success("Item added successfully");
-      router.push("/inventory");
+      if (andNew) {
+        // Reset form
+        setName(""); setSku(""); setOpeningStock("");
+        setSalesPrice(""); setPurchasePrice("");
+        setCategoryId("none"); setItemType("PRODUCT");
+      } else {
+        router.push("/inventory");
+      }
     }
-  }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 px-4 py-8 font-sans">
-      
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="h-10 w-10 border border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-900" asChild>
-          <Link href="/inventory">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* ── Header ── */}
+      <div className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/inventory" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-        </Button>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Add New Item</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Specify listing, pricing details and initial stock level</p>
+          <h1 className="text-base font-bold text-gray-900 dark:text-white">Add New Item</h1>
         </div>
+        <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <Settings className="w-4.5 h-4.5 text-gray-500" />
+        </button>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 md:p-8 space-y-8 shadow-sm">
-        
-        {/* Basic Information */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
-            <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center border border-emerald-500/10">
-              <Package className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Basic Information</h2>
+      {/* ── Form ── */}
+      <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
+        {/* Item Name */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            Item Name
+          </Label>
+          <Input
+            placeholder="e.g. MacBook"
+            className="h-11 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+
+        {/* Category + Item Type */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              Item Category
+            </Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger className="h-11 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">General</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="name" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Item Name <span className="text-destructive">*</span></Label>
-              <Input 
-                id="name" 
-                name="name" 
-                required 
-                placeholder="e.g. MacBook Pro M3" 
-                className="h-11 text-sm rounded-lg"
-              />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="sku" className="text-xs font-semibold text-gray-700 dark:text-gray-300">SKU / Item Code</Label>
-              <div className="relative">
-                <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input 
-                  id="sku" 
-                  name="sku" 
-                  placeholder="e.g. MAC3PRO" 
-                  className="pl-10 h-11 text-sm rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Item Type</Label>
-              <Select name="type" defaultValue="PRODUCT">
-                <SelectTrigger className="h-11 rounded-lg">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ITEM_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="categoryId" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Category</Label>
-              <Select name="categoryId" defaultValue="none">
-                <SelectTrigger className="h-11 rounded-lg">
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Measuring unit configured via custom Modal */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="unit" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Measuring Unit</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              Item Type
+            </Label>
+            <div className="flex items-center gap-2 h-11">
+              {(["PRODUCT", "SERVICE"] as const).map((t) => (
                 <button
+                  key={t}
                   type="button"
-                  onClick={() => setShowUnitModal(true)}
-                  className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1"
+                  onClick={() => setItemType(t)}
+                  className={cn(
+                    "h-9 px-4 rounded-lg text-xs font-semibold border transition-all",
+                    itemType === t
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                      : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-emerald-300"
+                  )}
                 >
-                  <Ruler className="w-3 h-3" />
-                  Configure Unit
+                  {t.charAt(0) + t.slice(1).toLowerCase()}
                 </button>
-              </div>
-              <div className="relative">
-                <Box className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input 
-                  id="unit"
-                  value={selectedUnitText}
-                  placeholder="Select/Configure Unit" 
-                  className="pl-10 h-11 text-sm rounded-lg bg-gray-50/50 cursor-pointer"
-                  onClick={() => setShowUnitModal(true)}
-                  readOnly
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="description" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Description</Label>
-              <Input 
-                id="description" 
-                name="description" 
-                placeholder="Brief item description (optional)" 
-                className="h-11 text-sm rounded-lg"
-              />
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Pricing */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
-            <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center border border-blue-500/10">
-              <DollarSign className="w-4.5 h-4.5 text-blue-600" />
-            </div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Pricing Details</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="purchasePrice" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Purchase Price</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input 
-                  id="purchasePrice" 
-                  name="purchasePrice" 
-                  type="number" 
-                  step="0.01" 
-                  min="0" 
-                  placeholder="0.00" 
-                  className="pl-10 h-11 text-sm rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sellingPrice" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Selling Price</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input 
-                  id="sellingPrice" 
-                  name="sellingPrice" 
-                  type="number" 
-                  step="0.01" 
-                  min="0" 
-                  placeholder="0.00" 
-                  className="pl-10 h-11 text-sm rounded-lg"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stock */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
-            <div className="w-8 h-8 bg-amber-500/10 rounded-lg flex items-center justify-center border border-amber-500/10">
-              <Package className="w-4.5 h-4.5 text-amber-600" />
-            </div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Stock Information</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="stockQuantity" className="text-xs font-semibold text-gray-700 dark:text-gray-300">Opening Stock Quantity</Label>
-              <Input 
-                id="stockQuantity" 
-                name="stockQuantity" 
-                type="number" 
-                min="0" 
-                placeholder="e.g. 10" 
-                className="h-11 text-sm rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-gray-500">Stock Value Preview</Label>
-              <div className="h-11 px-4 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg flex items-center text-xs text-gray-500">
-                Opening stock value is calculated automatically on creation.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Informational banner */}
-        <div className="flex items-start gap-3 p-4 bg-emerald-500/5 dark:bg-emerald-950/15 border border-emerald-500/10 rounded-xl">
-          <Info className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-            All fields marked with <span className="text-destructive font-bold">*</span> are mandatory. When adding stock, make sure to specify a valid measuring unit.
-          </p>
-        </div>
-
-        {/* Form Actions */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-800">
-          <Button variant="outline" type="button" className="h-10 px-6 rounded-lg text-xs font-semibold" asChild>
-            <Link href="/inventory">Cancel</Link>
-          </Button>
-          <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white h-10 px-6 rounded-lg font-bold text-xs shadow-md shadow-emerald-600/10">
-            {loading ? "Creating..." : "Save New Item"}
-          </Button>
-        </div>
-
-      </form>
-
-      {/* Select Measuring Unit Modal */}
-      <Dialog open={showUnitModal} onOpenChange={setShowUnitModal}>
-        <DialogContent className="max-w-md rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 p-0">
-          
-          {/* Modal Header */}
-          <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5 text-white flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <Ruler className="w-5 h-5" />
-                Select Measuring Unit
-              </DialogTitle>
-              <DialogDescription className="text-[11px] text-white/80 mt-0.5">
-                Define the primary, secondary unit and conversion scaling rate
-              </DialogDescription>
-            </div>
-            <button 
-              onClick={() => setShowUnitModal(false)} 
-              className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </div>
-
-          <div className="p-5 space-y-4 text-xs">
-            {/* Primary Unit */}
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Primary Unit (e.g. Kilogram)</Label>
-              <select
-                value={primaryUnit}
-                onChange={(e) => setPrimaryUnit(e.target.value)}
-                className="w-full h-10 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500"
+        {/* Tabs: Stock Details / Others */}
+        <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+          <div className="flex border-b border-gray-200 dark:border-gray-800">
+            {[
+              { id: "stock", label: "Stock Details" },
+              { id: "others", label: "Others" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "flex-1 py-3 text-sm font-semibold border-b-2 transition-colors",
+                  activeTab === tab.id
+                    ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                )}
               >
-                {COMMON_PRIMARY_UNITS.map((unit) => (
-                  <option key={unit} value={unit}>{unit}</option>
-                ))}
-              </select>
-            </div>
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-            {/* Secondary Unit */}
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Secondary Unit (Optional, e.g. Gram)</Label>
-              <select
-                value={secondaryUnit}
-                onChange={(e) => setSecondaryUnit(e.target.value)}
-                className="w-full h-10 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500"
-              >
-                <option value="">None / Not Applicable</option>
-                {COMMON_PRIMARY_UNITS.map((unit) => (
-                  <option key={unit} value={unit}>{unit}</option>
-                ))}
-              </select>
-            </div>
+          <div className="p-5 space-y-5">
+            {activeTab === "stock" ? (
+              <>
+                {/* Opening Stock + Measuring Unit */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      Opening Stock
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        className="pr-14 h-10 text-sm"
+                        value={openingStock}
+                        onChange={(e) => setOpeningStock(e.target.value)}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                        {unit.split(" ")[0]}
+                      </span>
+                    </div>
+                  </div>
 
-            {/* Conversion rate */}
-            {secondaryUnit && (
-              <div className="space-y-1.5 animate-fadeIn">
-                <Label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Conversion Rate</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    placeholder="e.g. 1000"
-                    className="h-10 text-xs"
-                    value={conversionRate}
-                    onChange={(e) => setConversionRate(e.target.value)}
-                  />
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">
-                    {secondaryUnit} per {primaryUnit}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      Measuring Unit
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowUnitModal(true)}
+                      className="w-full h-10 flex items-center justify-between px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 hover:border-emerald-400 transition-colors group"
+                    >
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                        {unit}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 flex-shrink-0" />
+                    </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1 font-medium italic">
-                  E.g., if Primary Unit is Kilogram and Secondary Unit is Gram, Conversion rate is 1000. (1 Kilogram = 1000 Grams)
-                </p>
+
+                {/* Sales Price + Purchase Price */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      Sales Price
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className="pr-16 h-10 text-sm"
+                        value={salesPrice}
+                        onChange={(e) => setSalesPrice(e.target.value)}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                        /{unit.split(" ")[0]}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      Purchase Price
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className="pr-16 h-10 text-sm"
+                        value={purchasePrice}
+                        onChange={(e) => setPurchasePrice(e.target.value)}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                        /{unit.split(" ")[0]}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Low Stock Alert */}
+                <div className="border border-amber-200 dark:border-amber-800/50 rounded-lg p-4 bg-amber-50 dark:bg-amber-900/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        Low Stock Alert
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLowStockAlert(!lowStockAlert)}
+                      className={cn(
+                        "relative w-11 h-6 rounded-full transition-colors",
+                        lowStockAlert ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform",
+                          lowStockAlert && "translate-x-5"
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {lowStockAlert && (
+                    <div className="mt-3 space-y-1.5">
+                      <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                        Low Stock Quantity
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="10"
+                          className="pr-14 h-10 text-sm bg-white dark:bg-gray-900"
+                          value={lowStockQty}
+                          onChange={(e) => setLowStockQty(e.target.value)}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                          {unit.split(" ")[0]}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                {/* SKU */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    SKU / Item Code
+                  </Label>
+                  <Input
+                    placeholder="e.g. MAC3PRO"
+                    className="h-10 text-sm"
+                    value={sku}
+                    onChange={(e) => setSku(e.target.value)}
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    Description
+                  </Label>
+                  <textarea
+                    placeholder="Enter item description..."
+                    rows={3}
+                    className="w-full text-sm px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Modal Actions */}
-          <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-2.5">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowUnitModal(false)} 
-              className="h-9 text-xs font-semibold"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveUnit}
-              className="h-9 text-xs text-white font-bold px-4 bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-600/20"
-            >
-              Save Unit
-            </Button>
-          </div>
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            variant="outline"
+            className="h-10 px-6 text-sm"
+            onClick={() => handleAddItem(true)}
+            disabled={loading}
+          >
+            Save &amp; New
+          </Button>
+          <Button
+            className="h-10 px-6 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            onClick={() => handleAddItem(false)}
+            disabled={loading}
+          >
+            {loading ? "Adding..." : "Add Item"}
+          </Button>
+        </div>
+      </div>
 
-        </DialogContent>
-      </Dialog>
-
+      {/* Measuring Unit Modal */}
+      <MeasuringUnitModal
+        open={showUnitModal}
+        onClose={() => setShowUnitModal(false)}
+        onSave={(u) => setUnit(u)}
+      />
     </div>
   );
 }

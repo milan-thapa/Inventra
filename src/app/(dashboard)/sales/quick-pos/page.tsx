@@ -13,6 +13,7 @@ import {
   Printer,
   Save,
   Calendar,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -972,7 +973,8 @@ export default function QuickPOSPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [nextInvoiceNo, setNextInvoiceNo] = useState(1);
 
   // Modals
@@ -1000,6 +1002,24 @@ export default function QuickPOSPage() {
 
   const [discountPct, setDiscountPct] = useState(0);
   const [taxPct, setTaxPct] = useState(0);
+
+  // Ref for category scroll container
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+
+  // Handle wheel event for horizontal scrolling with smooth behavior
+  const handleCategoryWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (categoryScrollRef.current) {
+      e.preventDefault();
+      const container = categoryScrollRef.current;
+      const scrollAmount = e.deltaY;
+      
+      // Use smooth scrolling behavior
+      container.scrollTo({
+        left: container.scrollLeft + scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // All totals derived — never stored — always correct
   const subtotal = cart.reduce((s, i) => s + i.quantity * Number(i.sellingPrice), 0);
@@ -1038,10 +1058,13 @@ export default function QuickPOSPage() {
   // Load initial data
   useEffect(() => {
     if (!activeProfileId) return;
-    getItems(activeProfileId).then((r) => r.data && setItems(r.data));
-    getItemCategories(activeProfileId).then((r) => r.data && setCategories(r.data));
-    getParties(activeProfileId).then((r) => r.data && setParties(r.data));
-    getNextInvoiceNo(activeProfileId).then((r) => r.data && setNextInvoiceNo(r.data));
+    setLoading(true);
+    Promise.all([
+      getItems(activeProfileId).then((r) => r.data && setItems(r.data)),
+      getItemCategories(activeProfileId).then((r) => r.data && setCategories(r.data)),
+      getParties(activeProfileId).then((r) => r.data && setParties(r.data)),
+      getNextInvoiceNo(activeProfileId).then((r) => r.data && setNextInvoiceNo(r.data)),
+    ]).finally(() => setLoading(false));
   }, [activeProfileId]);
 
   // Barcode scanner support: Enter key on exact SKU match adds to cart
@@ -1143,7 +1166,7 @@ export default function QuickPOSPage() {
     // Determine status based on received vs grandTotal
     const status = receivedAmount >= grandTotal ? "PAID" : receivedAmount <= 0 ? "UNPAID" : "PARTIAL";
 
-    setLoading(true);
+    setSaving(true);
     try {
       const res = await createSale(activeProfileId!, {
         items: cart.map((i) => ({
@@ -1189,7 +1212,7 @@ export default function QuickPOSPage() {
       console.error(e);
       toast.error("An unexpected error occurred while saving");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -1204,6 +1227,19 @@ export default function QuickPOSPage() {
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row overflow-hidden -m-4 md:-m-6 bg-background">
+      
+      {/* Loading State */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background z-50">
+          <div className="text-center space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping"></div>
+              <Loader2 className="w-12 h-12 text-emerald-500 mx-auto relative animate-spin" />
+            </div>
+            <p className="text-sm text-muted-foreground font-medium">Loading Quick POS...</p>
+          </div>
+        </div>
+      )}
 
       {/* ── LEFT: Product Grid ──────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden order-2 md:order-1">
@@ -1244,7 +1280,11 @@ export default function QuickPOSPage() {
         </div>
 
         {/* Category Pills */}
-        <div className="px-4 md:px-6 py-3 border-b border-border/40 flex items-center gap-2 overflow-x-auto no-scrollbar bg-background">
+        <div
+          ref={categoryScrollRef}
+          onWheel={handleCategoryWheel}
+          className="px-4 md:px-6 py-3 border-b border-border/40 flex items-center gap-2 overflow-x-auto no-scrollbar bg-background"
+        >
           <button
             onClick={() => setActiveCategory("All")}
             className={cn(
@@ -1632,7 +1672,7 @@ export default function QuickPOSPage() {
         total={grandTotal}
         currency={profile?.currency}
         parties={parties}
-        loading={loading}
+        loading={saving}
         nextInvoiceNo={nextInvoiceNo}
         onSave={handleSave}
       />
