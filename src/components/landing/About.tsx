@@ -55,13 +55,13 @@ export function About() {
             className="bg-white rounded-3xl p-8 md:p-12 shadow-xl mb-16"
           >
             <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              We started by talking to hundreds of small business owners—retailers, service providers, manufacturers—and heard the same frustrations over and over: expensive software, complicated interfaces, and tools that didn't work together.
+              We started by talking to hundreds of small business owners—retailers, service providers, manufacturers—and heard the same frustrations over and over: expensive software, complicated interfaces, and tools that didn&apos;t work together.
             </p>
             <p className="text-lg text-gray-700 leading-relaxed mb-6">
               So we built something different. A platform that combines inventory management, accounting, and business analytics in one intuitive interface. No expensive consultants, no steep learning curve—just powerful tools that work from day one.
             </p>
             <p className="text-lg text-gray-700 leading-relaxed">
-              Today, we're proud to serve thousands of businesses across the globe, helping them save time, reduce errors, and make smarter decisions. Our journey is just beginning, and we're committed to building the tools that small businesses need to succeed.
+              Today, we&apos;re proud to serve thousands of businesses across the globe, helping them save time, reduce errors, and make smarter decisions. Our journey is just beginning, and we&apos;re committed to building the tools that small businesses need to succeed.
             </p>
           </motion.div>
 
