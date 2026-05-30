@@ -74,6 +74,11 @@ export default auth((req) => {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/onboarding");
 
+  // Allow public routes to pass through without auth checks
+  if (isPublicRoute && !isAuthRoute) {
+    return addSecurityHeaders(response);
+  }
+
   // Redirect logged-in users away from auth routes
   if (isAuthRoute && isLoggedIn) {
     response = NextResponse.redirect(new URL("/dashboard", nextUrl));
