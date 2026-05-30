@@ -357,3 +357,90 @@ export async function getItemActivity(profileId: string, itemId: string) {
   }
 }
 
+// ─── Inventory Reports ────────────────────────────────────────────────────────
+
+export async function getInventoryReports(profileId: string, options?: {
+  startDate?: string;
+  endDate?: string;
+}) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const dateFilter: any = {};
+    if (options?.startDate || options?.endDate) {
+      dateFilter.createdAt = {};
+      if (options.startDate) dateFilter.createdAt.gte = new Date(options.startDate);
+      if (options.endDate) dateFilter.createdAt.lte = new Date(options.endDate);
+    }
+
+    // Get all items
+    const items = await db.item.findMany({
+      where: { profileId },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    // Get stock movements
+    const movements = await db.stockMovement.findMany({
+      where: { profileId, ...dateFilter },
+      orderBy: { createdAt: "desc" }
+    });
+
+    // Calculate metrics
+    const totalItems = items.length;
+    const totalStock = items.reduce((sum, item) => sum + Number(item.stockQuantity || 0), 0);
+    const totalValue = items.reduce((sum, item) => sum + (Number(item.stockQuantity || 0) * Number(item.purchasePrice || 0)), 0);
+    const lowStockItems = items.filter(item => item.reorderPoint && Number(item.stockQuantity) <= Number(item.reorderPoint));
+    const outOfStockItems = items.filter(item => Number(item.stockQuantity) === 0);
+
+    // Category-wise analysis
+    const categoryAnalysis = items.reduce((acc, item) => {
+      const categoryName = item.category?.name || "General";
+      if (!acc[categoryName]) {
+        acc[categoryName] = {
+          name: categoryName,
+          itemCount: 0,
+          totalStock: 0,
+          totalValue: 0
+        };
+      }
+      acc[categoryName].itemCount += 1;
+      acc[categoryName].totalStock += Number(item.stockQuantity || 0);
+      acc[categoryName].totalValue += Number(item.stockQuantity || 0) * Number(item.purchasePrice || 0);
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Stock movement summary
+    const stockAdded = movements.filter(m => m.type === "ADD").reduce((sum, m) => sum + m.quantity, 0);
+    const stockReduced = movements.filter(m => m.type === "REDUCE").reduce((sum, m) => sum + m.quantity, 0);
+
+    return {
+      data: {
+        summary: {
+          totalItems,
+          totalStock,
+          totalValue,
+          lowStockCount: lowStockItems.length,
+          outOfStockCount: outOfStockItems.length,
+          stockAdded,
+          stockReduced
+        },
+        lowStockItems,
+        outOfStockItems,
+        categoryAnalysis: Object.values(categoryAnalysis),
+        movements: movements.slice(0, 50) // Last 50 movements
+      }
+    };
+  } catch (e) {
+    logger.error("Failed to fetch inventory reports", e, { profileId, options });
+    return { error: "Failed to fetch inventory reports" };
+  }
+}
+

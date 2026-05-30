@@ -667,6 +667,20 @@ export default function InventoryPage() {
           </Button>
         </div>
 
+        {/* Reports Button */}
+        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800">
+          <Button
+            variant="outline"
+            className="w-full h-9 text-xs gap-2 justify-start"
+            asChild
+          >
+            <Link href="/reports/inventory">
+              <BarChart2 className="w-3.5 h-3.5" />
+              Inventory Reports
+            </Link>
+          </Button>
+        </div>
+
         {/* Search */}
         <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
           <div className="relative">

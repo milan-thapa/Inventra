@@ -3,14 +3,14 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
-  Users, Banknote, TrendingDown, TrendingUp, Receipt, UserCheck
+  Users, Banknote, TrendingDown, TrendingUp, Receipt, UserCheck, Package
 } from "lucide-react";
 import { REPORTS } from "@/lib/constants";
 
 export const metadata = { title: "Reports" };
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Users, Banknote, TrendingDown, TrendingUp, Receipt, UserCheck
+  Users, Banknote, TrendingDown, TrendingUp, Receipt, UserCheck, Package
 };
 
 export default async function ReportsPage() {

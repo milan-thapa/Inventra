@@ -142,6 +142,13 @@ export const REPORTS = [
     href: "/reports/party-statement",
     icon: "UserCheck",
   },
+  {
+    id: "inventory",
+    title: "Inventory Report",
+    description: "Complete inventory analysis with stock value, low stock items, and movements",
+    href: "/reports/inventory",
+    icon: "Package",
+  },
 ] as const;
 
 // ── Nav Items ─────────────────────────────────────────────
