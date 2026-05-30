@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials, getAvatarColor, cn } from "@/lib/utils";
 import Image from "next/image";
+import { updateUserAccount } from "@/lib/actions/profile";
 
 export default function MyAccountPage() {
   const { data: session } = useSession();
@@ -20,9 +21,18 @@ export default function MyAccountPage() {
 
   const handleSave = async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    toast({ title: "Account updated successfully" });
+    try {
+      const res = await updateUserAccount({ name, phone });
+      if (res.error) {
+        toast({ variant: "destructive", title: "Error", description: res.error });
+      } else {
+        toast({ title: "Account updated successfully" });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to update account" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const initials = getInitials(session?.user?.name ?? "U");

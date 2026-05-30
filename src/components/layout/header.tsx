@@ -13,6 +13,7 @@ import { NotificationsPanel } from "@/components/layout/notifications-panel";
 import { useUIStore, useProfileStore } from "@/stores/profile-store";
 import { getInitials } from "@/lib/utils";
 import { updateProfileSettings } from "@/lib/actions/profile";
+import { getUnreadCount } from "@/lib/actions/notification";
 
 const THEMES = [
   { value: "dark", label: "Dark Theme", icon: Moon },
@@ -34,6 +35,7 @@ export function Header() {
     setCommandPaletteOpen,
     setNotificationsOpen,
     notificationsOpen,
+    sidebarOpen,
   } = useUIStore();
 
   const { getActiveProfile, updateActiveProfile } = useProfileStore();
@@ -44,6 +46,7 @@ export function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
   const [lang, setLang] = useState("en");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Sync theme from store on mount and when activeProfile changes
   useEffect(() => {
@@ -55,6 +58,19 @@ export function Header() {
       setLang(activeProfile.language);
     }
   }, [activeProfile?.theme, activeProfile?.language]);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    if (activeProfile?.id) {
+      const fetchUnreadCount = async () => {
+        const res = await getUnreadCount(activeProfile.id);
+        if (res.data !== undefined) {
+          setUnreadCount(res.data);
+        }
+      };
+      fetchUnreadCount();
+    }
+  }, [activeProfile?.id, notificationsOpen]); // Refetch when panel closes
 
   // Apply theme to document
   useEffect(() => {
@@ -113,8 +129,9 @@ export function Header() {
           onClick={toggleSidebar}
           className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Toggle sidebar"
+          aria-expanded={sidebarOpen}
         >
-          <Menu className="w-4 h-4" />
+          <Menu className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 
@@ -144,7 +161,7 @@ export function Header() {
             className="sm:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Search"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-4 h-4" aria-hidden="true" />
           </button>
 
           {/* Language — hidden on mobile */}
@@ -179,9 +196,15 @@ export function Header() {
               onClick={() => { setNotificationsOpen(!notificationsOpen); closeAll(); }}
               className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors relative"
               title="Notifications"
+              aria-expanded={notificationsOpen}
+              aria-haspopup="true"
             >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full ring-1 ring-background" />
+              <Bell className="w-4 h-4" aria-hidden="true" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-rose-500 text-white text-[10px] font-bold rounded-full ring-2 ring-background">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
             <NotificationsPanel />
           </div>
@@ -192,8 +215,10 @@ export function Header() {
               onClick={() => { setThemeMenuOpen(!themeMenuOpen); setLangMenuOpen(false); setUserMenuOpen(false); }}
               className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
               title="Theme"
+              aria-expanded={themeMenuOpen}
+              aria-haspopup="true"
             >
-              {theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              {theme === "dark" ? <Moon className="w-4 h-4" aria-hidden="true" /> : <Sun className="w-4 h-4" aria-hidden="true" />}
             </button>
             {themeMenuOpen && (
               <div className="absolute right-0 top-full mt-1.5 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden z-50 w-44">

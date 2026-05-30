@@ -105,7 +105,8 @@ export function PartiesView({
           <Button
             size="sm"
             onClick={() => setAddPartyOpen(true)}
-            className="btn-income h-7 px-2 text-xs gap-1"
+            variant="income"
+            className="h-7 px-2 text-xs gap-1"
           >
             <Plus className="w-3 h-3" /> Add Party
           </Button>
@@ -154,7 +155,8 @@ export function PartiesView({
                 <Button
                   size="sm"
                   onClick={() => setAddPartyOpen(true)}
-                  className="btn-income h-7 px-2 text-xs gap-1"
+                  variant="income"
+                  className="h-7 px-2 text-xs gap-1"
                 >
                   <Plus className="w-3 h-3" /> Add New Party
                 </Button>

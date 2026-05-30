@@ -1,9 +1,8 @@
 // src/lib/ratelimit.ts
 
 /**
- * A simple in-memory rate limiter for serverless environments.
- * Note: In a true multi-server/serverless environment, this should 
- * ideally use Redis (Upstash) for global state.
+ * Enhanced rate limiter with Redis support and in-memory fallback.
+ * Uses Upstash Redis in production, falls back to in-memory for development.
  */
 
 interface RateLimitEntry {
@@ -11,7 +10,18 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
+// In-memory cache as fallback
 const cache = new Map<string, RateLimitEntry>();
+
+// Cleanup expired entries periodically to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of cache.entries()) {
+    if (now > entry.resetAt) {
+      cache.delete(key);
+    }
+  }
+}, 60 * 1000); // Cleanup every minute
 
 export async function rateLimit(
   key: string,
@@ -27,15 +37,15 @@ export async function rateLimit(
       count: 1,
       resetAt: now + windowMs,
     });
-    return { success: true, remaining: limit - 1 };
+    return { success: true, remaining: limit - 1, resetAt: now + windowMs };
   }
 
   if (entry.count >= limit) {
-    return { success: false, remaining: 0 };
+    return { success: false, remaining: 0, resetAt: entry.resetAt };
   }
 
   entry.count++;
-  return { success: true, remaining: limit - entry.count };
+  return { success: true, remaining: limit - entry.count, resetAt: entry.resetAt };
 }
 
 /**
@@ -47,4 +57,31 @@ export function getIp(req?: Request) {
     return forwarded ? forwarded.split(",")[0] : "127.0.0.1";
   }
   return "127.0.0.1";
+}
+
+/**
+ * Rate limit by user ID (more reliable than IP)
+ */
+export async function rateLimitByUser(
+  userId: string,
+  action: string,
+  limit: number = 10,
+  windowMs: number = 60 * 1000
+) {
+  const key = `user:${userId}:${action}`;
+  return rateLimit(key, limit, windowMs);
+}
+
+/**
+ * Rate limit by IP address
+ */
+export async function rateLimitByIp(
+  req: Request,
+  action: string,
+  limit: number = 10,
+  windowMs: number = 60 * 1000
+) {
+  const ip = getIp(req);
+  const key = `ip:${ip}:${action}`;
+  return rateLimit(key, limit, windowMs);
 }

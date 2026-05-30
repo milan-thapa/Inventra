@@ -49,6 +49,7 @@ const TOOLS_ITEMS = [
 ];
 
 const BOTTOM_ITEMS = [
+  { label: "Get Started", href: "/get-started", icon: Sparkles },
   { label: "Help & Support", href: "/help-and-supports", icon: HelpCircle },
   { label: "Tutorials", href: "/tutorials", icon: BookOpen },
   { label: "What's New", href: "/whats-new", icon: Sparkles },
@@ -62,6 +63,9 @@ interface Profile {
   category?: string | null;
   logo?: string | null;
   isDefault?: boolean;
+  taxEnabled?: boolean;
+  taxRate?: number;
+  taxType?: string;
 }
 
 export function Sidebar() {
@@ -76,7 +80,11 @@ export function Sidebar() {
     async function fetchProfiles() {
       const res = await getProfiles();
       if (res.data) {
-        setProfiles(res.data);
+        const serializedProfiles = res.data.map((p: any) => ({
+          ...p,
+          taxRate: Number(p.taxRate),
+        }));
+        setProfiles(serializedProfiles);
         const active = res.data.find((p) => p.isDefault);
         if (active) {
           setActiveProfileId(active.id);
@@ -113,7 +121,7 @@ export function Sidebar() {
         onClick={() => useUIStore.getState().setSidebarOpen(false)}
       />
 
-      <aside className="sidebar fixed md:relative z-30 md:z-auto flex flex-col h-full overflow-y-auto border-r border-border/50 select-none">
+      <aside className="sidebar fixed md:relative z-30 md:z-auto flex flex-col h-full overflow-y-auto border-r border-border/50 select-none" data-tour="sidebar">
 
         {/* ── Top bar: Logo only (hamburger lives in header) ── */}
         <div className="h-14 flex items-center px-4 border-b border-border/50 flex-shrink-0">
@@ -133,6 +141,8 @@ export function Sidebar() {
           <button
             onClick={() => setProfileMenuOpen(!profileMenuOpen)}
             className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-accent transition-colors"
+            aria-expanded={profileMenuOpen}
+            aria-haspopup="true"
           >
             {activeProfile ? (
               <>
@@ -142,6 +152,7 @@ export function Sidebar() {
                   <div 
                     className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 border border-border/10 shadow-sm"
                     style={{ backgroundColor: getAvatarColor(activeProfile.name) }}
+                    aria-hidden="true"
                   >
                     {getInitials(activeProfile.name)}
                   </div>
@@ -235,6 +246,8 @@ export function Sidebar() {
           {/* Useful Tools (collapsible) */}
           <button
             onClick={() => setToolsOpen(!toolsOpen)}
+            aria-expanded={toolsOpen}
+            aria-controls="tools-menu"
             className={cn(
               "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors",
               isToolsActive
@@ -242,12 +255,12 @@ export function Sidebar() {
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
-            <Wrench className="w-4 h-4 flex-shrink-0" />
+            <Wrench className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
             <span className="flex-1 text-left">Useful Tools</span>
             <ChevronRight className={cn(
               "w-3.5 h-3.5 transition-transform",
               toolsOpen && "rotate-90"
-            )} />
+            )} aria-hidden="true" />
           </button>
 
           <AnimatePresence>
@@ -257,6 +270,7 @@ export function Sidebar() {
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden pl-4"
+                id="tools-menu"
               >
                 {TOOLS_ITEMS.map((item) => (
                   <NavItem
@@ -302,8 +316,9 @@ function NavItem({
           ? "bg-emerald-600/15 text-emerald-500 font-medium"
           : "text-muted-foreground hover:bg-accent hover:text-foreground"
       )}
+      aria-current={active ? "page" : undefined}
     >
-      <Icon className={cn("w-4 h-4 flex-shrink-0", active && "text-emerald-500")} />
+      <Icon className={cn("w-4 h-4 flex-shrink-0", active && "text-emerald-500")} aria-hidden="true" />
       <span className="truncate">{label}</span>
     </Link>
   );

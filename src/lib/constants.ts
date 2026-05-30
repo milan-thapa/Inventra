@@ -38,6 +38,13 @@ export const DEFAULT_INCOME_CATEGORIES = [
   "Rental Income", "Interest", "Dividend", "Gift", "Other",
 ];
 
+// ── Default Item Categories ───────────────────────────────
+export const DEFAULT_ITEM_CATEGORIES = [
+  "Electronics", "Groceries", "Clothing", "Home & Kitchen",
+  "Stationery", "Sports", "Toys", "Books", "Beauty",
+  "Automotive", "Health", "Other",
+];
+
 // ── Payment Methods ───────────────────────────────────────
 export const PAYMENT_METHODS = [
   { value: "CASH", label: "Cash" },

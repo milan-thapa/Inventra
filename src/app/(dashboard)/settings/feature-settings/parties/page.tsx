@@ -5,6 +5,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useProfileStore } from "@/stores/profile-store";
+import { updateFeatureSettings } from "@/lib/actions/profile";
 
 const PARTY_FEATURES = [
   {
@@ -35,6 +37,7 @@ const PARTY_FEATURES = [
 
 export default function FeatureSettingsPartiesPage() {
   const { toast } = useToast();
+  const { activeProfileId } = useProfileStore();
   const [features, setFeatures] = useState(
     Object.fromEntries(PARTY_FEATURES.map((f) => [f.id, f.defaultEnabled]))
   );
@@ -44,10 +47,24 @@ export default function FeatureSettingsPartiesPage() {
     setFeatures((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const handleSave = async () => {
+    if (!activeProfileId) {
+      toast({ variant: "destructive", title: "No active profile found" });
+      return;
+    }
+    
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setLoading(false);
-    toast({ title: "Party settings saved" });
+    try {
+      const res = await updateFeatureSettings(activeProfileId, features);
+      if (res.error) {
+        toast({ variant: "destructive", title: "Error", description: res.error });
+      } else {
+        toast({ title: "Party settings saved" });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to save settings" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (

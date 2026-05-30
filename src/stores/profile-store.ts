@@ -14,9 +14,20 @@ interface Profile {
   currencyPos: string;
   language: string;
   calendarType: string;
+  dateFormat: string;
+  timeFormat: string;
   numberFormat: string;
   privacyMode: boolean;
   appLock: boolean;
+  taxEnabled: boolean;
+  taxRate: number;
+  taxType: string;
+  taxNumber?: string;
+  subscriptionPlan: string;
+  subscriptionEnd?: Date;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface ProfileStore {

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import type { CreatePartyInput, AddPaymentInInput } from "@/lib/validations/party";
 
 // ── Verify profile ownership ──────────────────────────────
@@ -61,7 +62,7 @@ export async function getParties(
 
     return { data: serializedParties };
   } catch (e) {
-    console.error("[getParties]", e);
+    logger.error("Failed to fetch parties", e, { profileId });
     return { error: "Failed to fetch parties" };
   }
 }
@@ -82,7 +83,8 @@ export async function getParty(profileId: string, partyId: string) {
     });
     if (!party) return { error: "Party not found" };
     return { data: serialize(party) };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch party", e, { profileId, partyId });
     return { error: "Failed to fetch party" };
   }
 }
@@ -130,7 +132,7 @@ export async function createParty(profileId: string, input: CreatePartyInput) {
     revalidatePath("/parties");
     return { data: serialize(party) };
   } catch (e) {
-    console.error("[createParty]", e);
+    logger.error("Failed to create party", e, { profileId, input });
     return { error: "Failed to create party" };
   }
 }
@@ -158,21 +160,26 @@ export async function updateParty(
     });
     revalidatePath("/parties");
     return { data: serialize(party) };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to update party", e, { profileId, partyId });
     return { error: "Failed to update party" };
   }
 }
 
-// ── Delete party ──────────────────────────────────────────
+// ── Delete party (soft delete) ─────────────────────────────
 export async function deleteParty(profileId: string, partyId: string) {
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
 
   try {
-    await db.party.delete({ where: { id: partyId } });
+    await db.party.update({
+      where: { id: partyId },
+      data: { deletedAt: new Date() },
+    });
     revalidatePath("/parties");
     return { success: true };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to delete party", e, { profileId, partyId });
     return { error: "Failed to delete party" };
   }
 }
@@ -232,7 +239,7 @@ export async function addPaymentIn(profileId: string, input: AddPaymentInInput) 
     revalidatePath("/dashboard");
     return { data: serialize(result) };
   } catch (e) {
-    console.error("[addPaymentIn]", e);
+    logger.error("Failed to add payment in", e, { profileId, input });
     return { error: "Failed to add payment" };
   }
 }
@@ -289,7 +296,7 @@ export async function addPaymentOut(profileId: string, input: AddPaymentInInput)
     revalidatePath("/dashboard");
     return { data: serialize(result) };
   } catch (e) {
-    console.error("[addPaymentOut]", e);
+    logger.error("Failed to add payment out", e, { profileId, input });
     return { error: "Failed to add payment" };
   }
 }
@@ -366,7 +373,77 @@ export async function getPartySummary(profileId: string) {
         payableCount: toGive._count,
       },
     };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to get party summary", e, { profileId });
     return { error: "Failed to get summary" };
+  }
+}
+
+// ── Get payment transactions for Sales Payment In tab ───────────────────────────────
+export async function getPaymentTransactions(profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const transactions = await db.partyTransaction.findMany({
+      where: {
+        profileId,
+        type: "PAYMENT_IN",
+      },
+      include: {
+        party: {
+          select: { id: true, name: true, phone: true },
+        },
+      },
+      orderBy: { date: "desc" },
+    });
+
+    return { data: transactions };
+  } catch (e) {
+    logger.error("Failed to fetch payment transactions", e, { profileId });
+    return { error: "Failed to fetch payment transactions" };
+  }
+}
+
+// ── Delete Payment Transaction ───────────────────────────────────────
+export async function deletePaymentTransaction(profileId: string, transactionId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const result = await db.$transaction(async (tx) => {
+      const transaction = await tx.partyTransaction.findFirst({
+        where: { id: transactionId, profileId },
+      });
+      if (!transaction) throw new Error("Transaction not found");
+
+      // Delete the transaction
+      await tx.partyTransaction.delete({
+        where: { id: transactionId },
+      });
+
+      // Recalculate party balance
+      const party = await tx.party.findFirst({
+        where: { id: transaction.partyId, profileId },
+      });
+      if (party) {
+        await recalculatePartyBalance(tx, party.id);
+      }
+
+      // Delete from unified transactions
+      await tx.transaction.deleteMany({
+        where: { referenceId: transactionId },
+      });
+
+      return transaction;
+    });
+
+    revalidatePath("/sales");
+    revalidatePath("/parties");
+    revalidatePath("/dashboard");
+    return { data: serialize(result) };
+  } catch (e) {
+    logger.error("Failed to delete payment transaction", e, { profileId, transactionId });
+    return { error: "Failed to delete payment" };
   }
 }

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, User, Building, CreditCard, ChevronRight, ChevronDown } from "lucide-react";
+import { Settings, User, Building, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -11,7 +11,6 @@ const SETTINGS_NAV = [
   { label: "General",          href: "/settings/general",          icon: Settings },
   { label: "My Account",       href: "/settings/my-account",       icon: User },
   { label: "Personal Profile", href: "/settings/personal-profile", icon: Building },
-  { label: "Subscription",     href: "/settings/subscription",     icon: CreditCard },
 ];
 
 const FEATURE_NAV = [

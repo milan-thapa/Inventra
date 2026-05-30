@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -10,16 +11,23 @@ async function verifyProfile(profileId: string) {
   return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
 }
 
-export async function getItems(profileId: string) {
+export async function getItems(profileId: string, options: { page?: number; limit?: number } = {}) {
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
 
+  const { page = 1, limit = 50 } = options;
+
   try {
-    const items = await db.item.findMany({
-      where: { profileId },
-      include: { category: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const [items, total] = await Promise.all([
+      db.item.findMany({
+        where: { profileId },
+        include: { category: true },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.item.count({ where: { profileId } }),
+    ]);
     
     // Convert Decimal to number for client serialization
     const serializedItems = items.map(item => ({
@@ -28,9 +36,9 @@ export async function getItems(profileId: string) {
       sellingPrice: Number(item.sellingPrice),
     }));
 
-    return { data: serializedItems };
+    return { data: serializedItems, total, page, limit };
   } catch (e) {
-    console.error("[getItems]", e);
+    logger.error("Failed to fetch items", e, { profileId });
     return { error: "Failed to fetch items" };
   }
 }
@@ -40,13 +48,24 @@ export async function createItem(
   data: {
     name: string;
     sku?: string;
+    barcode?: string;
     purchasePrice: number;
     sellingPrice: number;
     stockQuantity: number;
     unit?: string;
     type?: string;
     description?: string;
+    specifications?: string;
     categoryId?: string;
+    brand?: string;
+    manufacturer?: string;
+    supplierId?: string;
+    reorderPoint?: number;
+    maxStock?: number;
+    weight?: number;
+    dimensions?: string;
+    shelfLocation?: string;
+    images?: string[];
   }
 ) {
   const profile = await verifyProfile(profileId);
@@ -58,20 +77,31 @@ export async function createItem(
         profileId,
         name: data.name,
         sku: data.sku,
+        barcode: data.barcode,
         purchasePrice: data.purchasePrice,
         sellingPrice: data.sellingPrice,
         stockQuantity: data.stockQuantity,
         unit: data.unit,
         type: data.type || "PRODUCT",
         description: data.description,
+        specifications: data.specifications,
         categoryId: data.categoryId,
+        brand: data.brand,
+        manufacturer: data.manufacturer,
+        supplierId: data.supplierId,
+        reorderPoint: data.reorderPoint || 10,
+        maxStock: data.maxStock,
+        weight: data.weight,
+        dimensions: data.dimensions,
+        shelfLocation: data.shelfLocation,
+        images: data.images || [],
       },
     });
     
     revalidatePath("/inventory");
     return { data: item };
   } catch (e) {
-    console.error("[createItem]", e);
+    logger.error("Failed to create item", e, { profileId, data });
     return { error: "Failed to create item" };
   }
 }
@@ -94,7 +124,7 @@ export async function getItem(profileId: string, itemId: string) {
       }
     };
   } catch (e) {
-    console.error("[getItem]", e);
+    logger.error("Failed to fetch item", e, { profileId, itemId });
     return { error: "Failed to fetch item" };
   }
 }
@@ -105,13 +135,24 @@ export async function updateItem(
   data: {
     name?: string;
     sku?: string;
+    barcode?: string;
     purchasePrice?: number;
     sellingPrice?: number;
     stockQuantity?: number;
     unit?: string;
     type?: string;
     description?: string;
+    specifications?: string;
     categoryId?: string;
+    brand?: string;
+    manufacturer?: string;
+    supplierId?: string;
+    reorderPoint?: number;
+    maxStock?: number;
+    weight?: number;
+    dimensions?: string;
+    shelfLocation?: string;
+    images?: string[];
   }
 ) {
   const profile = await verifyProfile(profileId);
@@ -123,20 +164,31 @@ export async function updateItem(
       data: {
         name: data.name,
         sku: data.sku,
+        barcode: data.barcode,
         purchasePrice: data.purchasePrice,
         sellingPrice: data.sellingPrice,
         stockQuantity: data.stockQuantity,
         unit: data.unit,
         type: data.type,
         description: data.description,
+        specifications: data.specifications,
         categoryId: data.categoryId,
+        brand: data.brand,
+        manufacturer: data.manufacturer,
+        supplierId: data.supplierId,
+        reorderPoint: data.reorderPoint,
+        maxStock: data.maxStock,
+        weight: data.weight,
+        dimensions: data.dimensions,
+        shelfLocation: data.shelfLocation,
+        images: data.images,
       },
     });
     
     revalidatePath("/inventory");
     return { data: item };
   } catch (e) {
-    console.error("[updateItem]", e);
+    logger.error("Failed to update item", e, { profileId, itemId, data });
     return { error: "Failed to update item" };
   }
 }
@@ -153,23 +205,30 @@ export async function deleteItem(profileId: string, itemId: string) {
     revalidatePath("/inventory");
     return { success: true };
   } catch (e) {
-    console.error("[deleteItem]", e);
+    logger.error("Failed to delete item", e, { profileId, itemId });
     return { error: "Failed to delete item" };
   }
 }
 
-export async function getItemCategories(profileId: string) {
+export async function getItemCategories(profileId: string, options: { page?: number; limit?: number } = {}) {
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
 
+  const { page = 1, limit = 100 } = options;
+
   try {
-    const categories = await db.itemCategory.findMany({
-      where: { profileId },
-      orderBy: { name: "asc" },
-    });
-    return { data: categories };
+    const [categories, total] = await Promise.all([
+      db.itemCategory.findMany({
+        where: { profileId },
+        orderBy: { name: "asc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.itemCategory.count({ where: { profileId } }),
+    ]);
+    return { data: categories, total, page, limit };
   } catch (e) {
-    console.error("[getItemCategories]", e);
+    logger.error("Failed to fetch item categories", e, { profileId });
     return { error: "Failed to fetch categories" };
   }
 }
@@ -184,7 +243,7 @@ export async function createItemCategory(profileId: string, name: string) {
     });
     return { data: category };
   } catch (e) {
-    console.error("[createItemCategory]", e);
+    logger.error("Failed to create item category", e, { profileId, name });
     return { error: "Failed to create category" };
   }
 }
@@ -199,7 +258,102 @@ export async function deleteItemCategory(profileId: string, categoryId: string) 
     });
     return { success: true };
   } catch (e) {
-    console.error("[deleteItemCategory]", e);
+    logger.error("Failed to delete item category", e, { profileId, categoryId });
     return { error: "Failed to delete category" };
   }
 }
+
+export async function adjustStock(
+  profileId: string,
+  itemId: string,
+  type: "ADD" | "REDUCE",
+  data: {
+    quantity: number;
+    price: number;
+    remarks: string;
+    adjustedDate: string;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    // 1. Get the item to determine previous stock
+    const item = await db.item.findUnique({
+      where: { id: itemId, profileId }
+    });
+    if (!item) return { error: "Item not found" };
+
+    const previousQty = item.stockQuantity;
+    const quantity = Math.abs(data.quantity);
+    const newQty = type === "ADD" 
+      ? previousQty + quantity 
+      : Math.max(0, previousQty - quantity);
+
+    // 2. Perform updates: stock quantity & prices
+    const updateData: any = {
+      stockQuantity: newQty
+    };
+    if (type === "ADD") {
+      updateData.purchasePrice = data.price;
+    } else {
+      updateData.sellingPrice = data.price;
+    }
+
+    // Run transaction to ensure atomicity
+    const [updatedItem, movement] = await db.$transaction([
+      db.item.update({
+        where: { id: itemId },
+        data: updateData
+      }),
+      db.stockMovement.create({
+        data: {
+          itemId,
+          profileId,
+          type,
+          quantity,
+          previousQty,
+          newQty,
+          reason: data.remarks,
+          userId: session.user.id,
+          createdAt: new Date(data.adjustedDate)
+        }
+      })
+    ]);
+
+    revalidatePath("/inventory");
+    return { data: { item: updatedItem, movement } };
+  } catch (e) {
+    logger.error("Failed to adjust stock", e, { profileId, itemId, type, data });
+    return { error: "Failed to adjust stock" };
+  }
+}
+
+export async function getItemActivity(profileId: string, itemId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const movements = await db.stockMovement.findMany({
+      where: { itemId, profileId },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    return { data: movements };
+  } catch (e) {
+    logger.error("Failed to fetch item activity", e, { profileId, itemId });
+    return { error: "Failed to fetch item activity" };
+  }
+}
+

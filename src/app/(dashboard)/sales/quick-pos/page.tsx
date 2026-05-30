@@ -1010,6 +1010,31 @@ export default function QuickPOSPage() {
 
   const searchRef = useRef<HTMLInputElement>(null);
 
+  const addToCart = useCallback((item: any) => {
+    if (item.stockQuantity <= 0) {
+      toast.error(`Out of stock: ${item.name}`);
+      return;
+    }
+    setCart((prev) => {
+      const exists = prev.find((i) => i.id === item.id);
+      const currentInCart = exists?.quantity || 0;
+      const currentStock = item.stockQuantity;
+
+      if (currentInCart + 1 > currentStock) {
+        toast.warning("Cannot exceed available stock");
+        return prev;
+      }
+
+      if (exists) {
+        return prev.map((i) =>
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      }
+      return [{ ...item, quantity: 1 }, ...prev];
+    });
+    setSearch("");
+  }, []);
+
   // Load initial data
   useEffect(() => {
     if (!activeProfileId) return;
@@ -1047,32 +1072,7 @@ export default function QuickPOSPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [search, items]);
-
-  const addToCart = useCallback((item: any) => {
-    if (item.stockQuantity <= 0) {
-      toast.error(`Out of stock: ${item.name}`);
-      return;
-    }
-    setCart((prev) => {
-      const exists = prev.find((i) => i.id === item.id);
-      const currentInCart = exists?.quantity || 0;
-      const currentStock = item.stockQuantity;
-
-      if (currentInCart + 1 > currentStock) {
-        toast.warning("Cannot exceed available stock");
-        return prev;
-      }
-
-      if (exists) {
-        return prev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [{ ...item, quantity: 1 }, ...prev];
-    });
-    setSearch("");
-  }, []);
+  }, [search, items, cart, addToCart]);
 
   const updateQty = (id: string, delta: number) => {
     setCart((prev) =>
@@ -1203,15 +1203,15 @@ export default function QuickPOSPage() {
   });
 
   return (
-    <div className="h-[calc(100vh-140px)] flex overflow-hidden -m-4 md:-m-6 bg-background">
+    <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row overflow-hidden -m-4 md:-m-6 bg-background">
 
       {/* ── LEFT: Product Grid ──────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden order-2 md:order-1">
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-border/60 bg-background flex items-center justify-between gap-4">
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-border/60 bg-background flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
           <h1 className="text-lg font-bold text-foreground">Quick POS</h1>
-          <div className="flex items-center gap-3 flex-1 max-w-lg">
+          <div className="flex items-center gap-2 md:gap-3 flex-1 max-w-lg w-full">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -1219,13 +1219,14 @@ export default function QuickPOSPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search items..."
-                className="pl-9 h-9 bg-muted/30 border-border/50 focus-visible:ring-emerald-500"
+                className="pl-9 h-9 bg-muted/30 border-border/50 focus-visible:ring-emerald-500 text-sm"
                 autoFocus
               />
               {search && (
                 <button
                   onClick={() => setSearch("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 hover:text-foreground text-muted-foreground"
+                  aria-label="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1234,19 +1235,20 @@ export default function QuickPOSPage() {
             <Button
               onClick={() => setAddItemOpen(true)}
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 shrink-0 font-semibold"
+              variant="emerald"
+              className="h-9 shrink-0 font-semibold"
             >
-              <Plus className="w-4 h-4 mr-1" /> Add New Item
+              <Plus className="w-4 h-4 mr-1 md:mr-1" /> <span className="hidden sm:inline">Add New Item</span>
             </Button>
           </div>
         </div>
 
         {/* Category Pills */}
-        <div className="px-6 py-3 border-b border-border/40 flex items-center gap-2 overflow-x-auto no-scrollbar bg-background">
+        <div className="px-4 md:px-6 py-3 border-b border-border/40 flex items-center gap-2 overflow-x-auto no-scrollbar bg-background">
           <button
             onClick={() => setActiveCategory("All")}
             className={cn(
-              "px-4 py-1.5 rounded-md text-sm font-semibold transition-colors shrink-0",
+              "px-3 md:px-4 py-1.5 rounded-md text-xs md:text-sm font-semibold transition-colors shrink-0",
               activeCategory === "All"
                 ? "bg-emerald-500 text-white"
                 : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -1259,7 +1261,7 @@ export default function QuickPOSPage() {
               key={cat.id}
               onClick={() => setActiveCategory(cat.name)}
               className={cn(
-                "px-4 py-1.5 rounded-md text-sm font-semibold transition-colors shrink-0",
+                "px-3 md:px-4 py-1.5 rounded-md text-xs md:text-sm font-semibold transition-colors shrink-0",
                 activeCategory === cat.name
                   ? "bg-emerald-500 text-white"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -1271,14 +1273,14 @@ export default function QuickPOSPage() {
         </div>
 
         {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
           {filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <Search className="w-8 h-8 mb-2 opacity-30" />
               <p className="text-sm">No items found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
               {filteredItems.map((item) => {
                 const inCart = cart.find((c) => c.id === item.id);
                 const outOfStock = item.stockQuantity <= 0;
@@ -1292,7 +1294,7 @@ export default function QuickPOSPage() {
                     )}
                   >
                     {/* ⓘ Info icon */}
-                    <button className="absolute top-2.5 right-2.5 text-muted-foreground/60 hover:text-muted-foreground z-10">
+                    <button className="absolute top-2.5 right-2.5 text-muted-foreground/60 hover:text-muted-foreground z-10" aria-label="Item details">
                       <Info className="w-3.5 h-3.5" />
                     </button>
 
@@ -1381,10 +1383,21 @@ export default function QuickPOSPage() {
       </div>
 
       {/* ── RIGHT: Billing Panel ─────────────────────────────────────────────── */}
-      <div className="w-[340px] border-l border-border/60 bg-card flex flex-col">
+      <div className="w-full md:w-[340px] border-l md:border-l border-t md:border-t border-border/60 bg-card flex flex-col order-1 md:order-2 h-[400px] md:h-auto">
+        {/* Mobile Toggle - Only show on mobile */}
+        <div className="md:hidden px-4 py-3 border-b border-border/50 flex items-center justify-between bg-background">
+          <h2 className="text-sm font-bold">
+            Billing Items
+            {cart.length > 0 && (
+              <span className="ml-1.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {cart.length}
+              </span>
+            )}
+          </h2>
+        </div>
 
         {/* Header */}
-        <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+        <div className="hidden md:flex px-5 py-4 border-b border-border/50 items-center justify-between">
           <h2 className="text-sm font-bold">
             Billing Items
             {cart.length > 0 && (
@@ -1567,7 +1580,8 @@ export default function QuickPOSPage() {
           <Button
             disabled={cart.length === 0 || loading}
             onClick={() => setConfirmOpen(true)}
-            className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm mt-1"
+            variant="emerald"
+            className="w-full h-11 font-semibold text-sm mt-1"
           >
             Continue Billing
           </Button>

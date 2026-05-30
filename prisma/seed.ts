@@ -14,6 +14,12 @@ const INCOME_CATEGORIES = [
   "Rental Income", "Interest", "Dividend", "Gift", "Other",
 ];
 
+const ITEM_CATEGORIES = [
+  "Electronics", "Groceries", "Clothing", "Home & Kitchen",
+  "Stationery", "Sports", "Toys", "Books", "Beauty",
+  "Automotive", "Health", "Other",
+];
+
 async function main() {
   console.log("🌱 Seeding Inventra database...");
 
@@ -74,6 +80,19 @@ async function main() {
     });
   }
   console.log(`✅ ${INCOME_CATEGORIES.length} income categories seeded`);
+
+  // ── Item Categories ────────────────────────────────────────
+  for (const name of ITEM_CATEGORIES) {
+    await prisma.itemCategory.upsert({
+      where: { profileId_name: { profileId: profile.id, name } },
+      update: {},
+      create: {
+        profileId: profile.id,
+        name,
+      },
+    });
+  }
+  console.log(`✅ ${ITEM_CATEGORIES.length} item categories seeded`);
 
   // ── Demo Parties ─────────────────────────────────────────
   const party1 = await prisma.party.upsert({

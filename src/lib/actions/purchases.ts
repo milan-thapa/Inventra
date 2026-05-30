@@ -194,6 +194,157 @@ export async function createPurchase(
   }
 }
 
+// Payment out functions - disabled until schema is updated
+// These require Purchase model to have: receivedAmount, payments relation
+// and Payment model to have: purchaseId field
+
+/*
+export async function recordPaymentOut(
+  profileId: string,
+  purchaseId: string,
+  data: {
+    amount: number;
+    paymentMethod: string;
+    remarks?: string;
+    date: Date;
+  }
+) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const purchase = await db.purchase.findUnique({
+      where: { id: purchaseId, profileId },
+      include: { payments: true, party: true },
+    });
+
+    if (!purchase) return { error: "Purchase not found" };
+
+    const result = await db.$transaction(async (tx) => {
+      // Create payment record
+      const payment = await tx.payment.create({
+        data: {
+          profileId,
+          purchaseId,
+          partyId: purchase.partyId,
+          amount: data.amount,
+          paymentMethod: data.paymentMethod as PaymentMethod,
+          remarks: data.remarks,
+          date: data.date,
+        },
+      });
+
+      // Update purchase received amount
+      const totalPaid = purchase.payments.reduce((sum, p) => sum + Number(p.amount), 0) + data.amount;
+      await tx.purchase.update({
+        where: { id: purchaseId },
+        data: {
+          receivedAmount: totalPaid,
+          status: totalPaid >= Number(purchase.grandTotal) ? "PAID" : 
+                 totalPaid > 0 ? "PARTIAL" : "UNPAID",
+        },
+      });
+
+      // Record party transaction if party exists
+      if (purchase.partyId) {
+        const lastPartyTx = await tx.partyTransaction.findFirst({
+          where: { profileId, type: PartyTxType.PAYMENT_OUT },
+          orderBy: { receiptNumber: "desc" },
+        });
+        const nextReceiptNo = (lastPartyTx?.receiptNumber ?? 0) + 1;
+
+        await tx.partyTransaction.create({
+          data: {
+            partyId: purchase.partyId,
+            profileId,
+            receiptNumber: nextReceiptNo,
+            type: PartyTxType.PAYMENT_OUT,
+            amount: data.amount,
+            paymentMethod: data.paymentMethod as PaymentMethod,
+            remarks: `Payment for Purchase Bill #${purchase.billNo}`,
+            date: data.date,
+          },
+        });
+
+        // Recalculate party balance
+        await recalculatePartyBalance(tx, purchase.partyId);
+      }
+
+      return payment;
+    });
+
+    revalidatePath("/purchase");
+    revalidatePath("/dashboard");
+    revalidatePath("/parties");
+    if (purchase.partyId) revalidatePath(`/parties/${purchase.partyId}`);
+
+    return { data: result };
+  } catch (e) {
+    console.error("[recordPaymentOut]", e);
+    return { error: "Failed to record payment out" };
+  }
+}
+
+export async function deletePaymentOut(profileId: string, paymentId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const payment = await db.payment.findUnique({
+      where: { id: paymentId, profileId },
+      include: { purchase: { include: { payments: true, party: true } } },
+    });
+
+    if (!payment) return { error: "Payment not found" };
+
+    await db.$transaction(async (tx) => {
+      // Delete party transaction if exists
+      if (payment.partyId) {
+        await tx.partyTransaction.deleteMany({
+          where: {
+            profileId,
+            remarks: { contains: `Payment for Purchase Bill #${payment.purchase?.billNo}` },
+          },
+        });
+
+        // Recalculate party balance
+        await recalculatePartyBalance(tx, payment.partyId);
+      }
+
+      // Update purchase received amount
+      if (payment.purchase) {
+        const remainingPayments = payment.purchase.payments.filter(p => p.id !== paymentId);
+        const totalPaid = remainingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+        
+        await tx.purchase.update({
+          where: { id: payment.purchaseId },
+          data: {
+            receivedAmount: totalPaid,
+            status: totalPaid >= Number(payment.purchase.grandTotal) ? "PAID" : 
+                   totalPaid > 0 ? "PARTIAL" : "UNPAID",
+          },
+        });
+      }
+
+      // Delete payment
+      await tx.payment.delete({
+        where: { id: paymentId },
+      });
+    });
+
+    revalidatePath("/purchase");
+    revalidatePath("/dashboard");
+    revalidatePath("/parties");
+    if (payment.partyId) revalidatePath(`/parties/${payment.partyId}`);
+
+    return { success: true };
+  } catch (e) {
+    console.error("[deletePaymentOut]", e);
+    return { error: "Failed to delete payment out" };
+  }
+}
+*/
+
 export async function deletePurchase(profileId: string, purchaseId: string) {
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
@@ -221,12 +372,25 @@ export async function deletePurchase(profileId: string, purchaseId: string) {
         }
       }
 
-      // 2. Delete the unified transaction record
+      // 2. Delete party transactions associated with this purchase
+      if (purchase.partyId) {
+        await tx.partyTransaction.deleteMany({
+          where: {
+            partyId: purchase.partyId,
+            profileId,
+            remarks: { contains: `Bill #${purchase.billNo}` },
+          },
+        });
+        // Recalculate party balance after deleting transactions
+        await recalculatePartyBalance(tx, purchase.partyId);
+      }
+
+      // 3. Delete the unified transaction record
       await tx.transaction.deleteMany({
         where: { profileId, referenceId: purchaseId },
       });
 
-      // 3. Delete the purchase (items will be deleted automatically due to Cascade)
+      // 4. Delete the purchase (items will be deleted automatically due to Cascade)
       await tx.purchase.delete({
         where: { id: purchaseId },
       });
@@ -235,6 +399,7 @@ export async function deletePurchase(profileId: string, purchaseId: string) {
     revalidatePath("/purchase");
     revalidatePath("/inventory");
     revalidatePath("/dashboard");
+    revalidatePath("/parties");
     return { success: true };
   } catch (e) {
     console.error("[deletePurchase]", e);

@@ -3,10 +3,11 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/constants";
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, DEFAULT_ITEM_CATEGORIES } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
 import type { CreateProfileInput, UpdateSettingsInput } from "@/lib/validations/account";
 import { rateLimit } from "@/lib/ratelimit";
+import { logger } from "@/lib/logger";
 
 // ── Get all profiles for current user ────────────────────
 export async function getProfiles() {
@@ -62,6 +63,23 @@ export async function createProfile(input: CreateProfileInput) {
   if (!success) return { error: "Too many requests. Please try again in a minute." };
 
   try {
+    // Ensure user exists in database
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+    });
+    
+    if (!user) {
+      // Create user if they don't exist (can happen with JWT sessions)
+      await db.user.create({
+        data: {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          image: session.user.image,
+        },
+      });
+    }
+
     // Check if this is the first profile
     const existingCount = await db.profile.count({
       where: { userId: session.user.id },
@@ -89,6 +107,11 @@ export async function createProfile(input: CreateProfileInput) {
       ...DEFAULT_INCOME_CATEGORIES.map((name) =>
         db.incomeCategory.create({
           data: { profileId: profile.id, name, isDefault: true },
+        })
+      ),
+      ...DEFAULT_ITEM_CATEGORIES.map((name) =>
+        db.itemCategory.create({
+          data: { profileId: profile.id, name },
         })
       ),
       // Create default Cash account
@@ -174,6 +197,170 @@ export async function updateProfileSettings(
     return { data: updated };
   } catch {
     return { error: "Failed to update settings" };
+  }
+}
+
+// ── Update tax settings ────────────────────────────────────
+export async function updateTaxSettings(
+  profileId: string,
+  settings: {
+    taxEnabled: boolean;
+    taxRate: number;
+    taxType: string;
+    taxNumber?: string;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
+  try {
+    const profile = await db.profile.findFirst({
+      where: { id: profileId, userId: session.user.id },
+    });
+    if (!profile) return { error: "Profile not found" };
+
+    const updated = await db.profile.update({
+      where: { id: profileId },
+      data: {
+        taxEnabled: settings.taxEnabled,
+        taxRate: settings.taxRate,
+        taxType: settings.taxType,
+        taxNumber: settings.taxNumber || null,
+      },
+    });
+
+    revalidatePath("/settings/tax");
+    return { data: updated };
+  } catch {
+    return { error: "Failed to update tax settings" };
+  }
+}
+
+// ── Update personal profile ────────────────────────────────
+export async function updatePersonalProfile(
+  profileId: string,
+  data: {
+    name: string;
+    category?: string;
+    address?: string;
+    logo?: string;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
+  try {
+    const profile = await db.profile.findFirst({
+      where: { id: profileId, userId: session.user.id },
+    });
+    if (!profile) return { error: "Profile not found" };
+
+    const updated = await db.profile.update({
+      where: { id: profileId },
+      data: {
+        name: data.name,
+        category: data.category || null,
+        address: data.address || null,
+        logo: data.logo || null,
+      },
+    });
+
+    revalidatePath("/settings/personal-profile");
+    revalidatePath("/dashboard");
+    return { data: updated };
+  } catch {
+    return { error: "Failed to update profile" };
+  }
+}
+
+// ── Update user account ────────────────────────────────────
+export async function updateUserAccount(
+  data: {
+    name: string;
+    phone?: string;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
+  try {
+    const updated = await db.user.update({
+      where: { id: session.user.id },
+      data: {
+        name: data.name,
+        phone: data.phone || null,
+      },
+    });
+
+    revalidatePath("/settings/my-account");
+    return { data: updated };
+  } catch {
+    return { error: "Failed to update account" };
+  }
+}
+
+// ── Update feature settings ────────────────────────────────
+export async function updateFeatureSettings(
+  profileId: string,
+  settings: {
+    sendReminder?: boolean;
+    openingBalance?: boolean;
+    partyPhoto?: boolean;
+    panNumber?: boolean;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
+  try {
+    const profile = await db.profile.findFirst({
+      where: { id: profileId, userId: session.user.id },
+    });
+    if (!profile) return { error: "Profile not found" };
+
+    // Store feature settings in address field as JSON for now
+    // In production, add dedicated columns to the Profile schema
+    const currentSettings = profile.address ? JSON.parse(profile.address) : {};
+    const newSettings = { ...currentSettings, ...settings };
+
+    const updated = await db.profile.update({
+      where: { id: profileId },
+      data: {
+        address: JSON.stringify(newSettings),
+      },
+    });
+
+    revalidatePath("/settings/feature-settings/parties");
+    return { data: updated, success: true };
+  } catch (e) {
+    logger.error("Failed to update feature settings", e, { profileId, settings });
+    return { error: "Failed to update feature settings" };
+  }
+}
+
+// ── Get feature settings ────────────────────────────────────
+export async function getFeatureSettings(profileId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
+  try {
+    const profile = await db.profile.findFirst({
+      where: { id: profileId, userId: session.user.id },
+    });
+    if (!profile) return { error: "Profile not found" };
+
+    // Parse feature settings from address field
+    const settings = profile.address ? JSON.parse(profile.address) : {
+      sendReminder: true,
+      openingBalance: true,
+      partyPhoto: false,
+      panNumber: false,
+    };
+
+    return { data: settings };
+  } catch (e) {
+    logger.error("Failed to get feature settings", e, { profileId });
+    return { error: "Failed to get feature settings" };
   }
 }
 

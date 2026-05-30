@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, BalanceType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -22,27 +23,54 @@ export async function getSales(profileId: string) {
       include: {
         party: true,
         items: true,
+        payments: true,
       },
       orderBy: { date: "desc" },
     });
 
     // Convert Decimal to number
-    const serializedSales = sales.map(sale => ({
-      ...sale,
-      totalAmount: Number(sale.totalAmount),
-      discount: Number(sale.discount),
-      tax: Number(sale.tax),
-      grandTotal: Number(sale.grandTotal),
-      party: sale.party ? {
-        ...sale.party,
-        openingBalance: Number(sale.party.openingBalance)
-      } : null,
-      items: sale.items.map(item => ({
-        ...item,
-        rate: Number(item.rate),
-        amount: Number(item.amount)
-      }))
-    }));
+    const serializedSales = sales.map(sale => {
+      const totalReceived = sale.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+      const remainingAmount = Number(sale.grandTotal) - totalReceived;
+      
+      // Determine status based on payments only if there are payment records
+      // Otherwise use the existing status from database
+      let status = sale.status;
+      if (sale.payments.length > 0) {
+        if (totalReceived >= Number(sale.grandTotal)) {
+          status = "PAID";
+        } else if (totalReceived > 0) {
+          status = "PARTIAL";
+        } else {
+          status = "UNPAID";
+        }
+      }
+
+      return {
+        ...sale,
+        totalAmount: Number(sale.totalAmount),
+        discount: Number(sale.discount),
+        tax: Number(sale.tax),
+        grandTotal: Number(sale.grandTotal),
+        receivedAmount: Number(sale.receivedAmount || 0),
+        totalReceived,
+        remainingAmount,
+        status,
+        party: sale.party ? {
+          ...sale.party,
+          openingBalance: Number(sale.party.openingBalance)
+        } : null,
+        items: sale.items.map(item => ({
+          ...item,
+          rate: Number(item.rate),
+          amount: Number(item.amount)
+        })),
+        payments: sale.payments.map(payment => ({
+          ...payment,
+          amount: Number(payment.amount)
+        }))
+      };
+    });
 
     return { data: serializedSales };
   } catch (e) {
@@ -83,12 +111,57 @@ export async function createSale(
     remarks?: string;
     invoiceNo?: number;
     date: Date;
+    dueDate?: Date;
   }
 ) {
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
 
   try {
+    // Check credit limit if party is selected
+    if (data.partyId) {
+      const party = await db.party.findUnique({
+        where: { id: data.partyId, profileId },
+      });
+
+      if (party && Number(party.creditLimit) > 0) {
+        const currentBalance = Number(party.openingBalance);
+        const newBalance = currentBalance + data.grandTotal;
+        
+        if (newBalance > Number(party.creditLimit)) {
+          return { 
+            error: `Credit limit exceeded. Current balance: ${currentBalance}, New balance would be: ${newBalance}, Credit limit: ${party.creditLimit}` 
+          };
+        }
+      }
+    }
+
+    // Apply applicable discounts
+    let calculatedDiscount = data.discount;
+    const activeDiscounts = await db.discount.findMany({
+      where: { 
+        profileId,
+        isActive: true,
+        OR: [
+          { startDate: { lte: new Date() } },
+          { startDate: null }
+        ],
+        AND: [
+          { endDate: { gte: new Date() } },
+          { endDate: null }
+        ]
+      },
+    });
+
+    for (const discount of activeDiscounts) {
+      if (discount.type === "PERCENTAGE") {
+        const discountAmount = data.totalAmount * (Number(discount.value) / 100);
+        calculatedDiscount += discountAmount;
+      } else if (discount.type === "FIXED_AMOUNT") {
+        calculatedDiscount += Number(discount.value);
+      }
+    }
+
     const method = data.paymentMethod.toLowerCase().includes("cash") ? "CASH" : "BANK";
 
     // Use transaction to ensure all operations succeed or fail together
@@ -113,6 +186,8 @@ export async function createSale(
           status: data.status,
           remarks: data.remarks,
           date: data.date,
+          dueDate: data.dueDate,
+          receivedAmount: data.receivedAmount || (data.status === "PAID" ? data.grandTotal : 0),
           items: {
             create: data.items.map((item) => ({
               itemId: item.itemId || null,
@@ -217,6 +292,151 @@ export async function createSale(
   }
 }
 
+export async function recordPayment(
+  profileId: string,
+  saleId: string,
+  data: {
+    amount: number;
+    paymentMethod: string;
+    remarks?: string;
+    date: Date;
+  }
+) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const sale = await db.sale.findUnique({
+      where: { id: saleId, profileId },
+      include: { payments: true, party: true },
+    });
+
+    if (!sale) return { error: "Sale not found" };
+
+    const result = await db.$transaction(async (tx) => {
+      // Create payment record
+      const payment = await tx.payment.create({
+        data: {
+          profileId,
+          saleId,
+          partyId: sale.partyId,
+          amount: data.amount,
+          paymentMethod: data.paymentMethod as PaymentMethod,
+          remarks: data.remarks,
+          date: data.date,
+        },
+      });
+
+      // Update sale received amount
+      const totalReceived = sale.payments.reduce((sum, p) => sum + Number(p.amount), 0) + data.amount;
+      await tx.sale.update({
+        where: { id: saleId },
+        data: {
+          receivedAmount: totalReceived,
+          status: totalReceived >= Number(sale.grandTotal) ? "PAID" : 
+                 totalReceived > 0 ? "PARTIAL" : "UNPAID",
+        },
+      });
+
+      // Record party transaction if party exists
+      if (sale.partyId) {
+        const lastPartyTx = await tx.partyTransaction.findFirst({
+          where: { profileId, type: PartyTxType.PAYMENT_IN },
+          orderBy: { receiptNumber: "desc" },
+        });
+        const nextReceiptNo = (lastPartyTx?.receiptNumber ?? 0) + 1;
+
+        await tx.partyTransaction.create({
+          data: {
+            partyId: sale.partyId,
+            profileId,
+            receiptNumber: nextReceiptNo,
+            type: PartyTxType.PAYMENT_IN,
+            amount: data.amount,
+            paymentMethod: data.paymentMethod as PaymentMethod,
+            remarks: `Payment for Invoice #${sale.invoiceNo}`,
+            date: data.date,
+          },
+        });
+
+        // Recalculate party balance
+        await recalculatePartyBalance(tx, sale.partyId);
+      }
+
+      return payment;
+    });
+
+    revalidatePath("/sales");
+    revalidatePath("/dashboard");
+    revalidatePath("/parties");
+    if (sale.partyId) revalidatePath(`/parties/${sale.partyId}`);
+
+    return { data: result };
+  } catch (e) {
+    console.error("[recordPayment]", e);
+    return { error: "Failed to record payment" };
+  }
+}
+
+export async function deletePayment(profileId: string, paymentId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const payment = await db.payment.findUnique({
+      where: { id: paymentId, profileId },
+      include: { sale: { include: { payments: true, party: true } } },
+    });
+
+    if (!payment) return { error: "Payment not found" };
+
+    await db.$transaction(async (tx) => {
+      // Delete party transaction if exists
+      if (payment.partyId) {
+        await tx.partyTransaction.deleteMany({
+          where: {
+            profileId,
+            remarks: { contains: `Payment for Invoice #${payment.sale?.invoiceNo}` },
+          },
+        });
+
+        // Recalculate party balance
+        await recalculatePartyBalance(tx, payment.partyId);
+      }
+
+      // Update sale received amount
+      if (payment.sale) {
+        const remainingPayments = payment.sale.payments.filter(p => p.id !== paymentId);
+        const totalReceived = remainingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+        
+        await tx.sale.update({
+          where: { id: payment.saleId },
+          data: {
+            receivedAmount: totalReceived,
+            status: totalReceived >= Number(payment.sale.grandTotal) ? "PAID" : 
+                   totalReceived > 0 ? "PARTIAL" : "UNPAID",
+          },
+        });
+      }
+
+      // Delete payment
+      await tx.payment.delete({
+        where: { id: paymentId },
+      });
+    });
+
+    revalidatePath("/sales");
+    revalidatePath("/dashboard");
+    revalidatePath("/parties");
+    if (payment.partyId) revalidatePath(`/parties/${payment.partyId}`);
+
+    return { success: true };
+  } catch (e) {
+    console.error("[deletePayment]", e);
+    return { error: "Failed to delete payment" };
+  }
+}
+
 export async function deleteSale(profileId: string, saleId: string) {
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
@@ -224,7 +444,7 @@ export async function deleteSale(profileId: string, saleId: string) {
   try {
     const sale = await db.sale.findUnique({
       where: { id: saleId, profileId },
-      include: { items: true },
+      include: { items: true, payments: true },
     });
 
     if (!sale) return { error: "Sale not found" };
@@ -244,12 +464,30 @@ export async function deleteSale(profileId: string, saleId: string) {
         }
       }
 
-      // 2. Delete the unified transaction record
+      // 2. Delete party transactions associated with this sale
+      if (sale.partyId) {
+        await tx.partyTransaction.deleteMany({
+          where: {
+            partyId: sale.partyId,
+            profileId,
+            remarks: { contains: `Invoice #${sale.invoiceNo}` },
+          },
+        });
+        // Recalculate party balance after deleting transactions
+        await recalculatePartyBalance(tx, sale.partyId);
+      }
+
+      // 3. Delete the unified transaction record
       await tx.transaction.deleteMany({
         where: { profileId, referenceId: saleId },
       });
 
-      // 3. Delete the sale (items will be deleted automatically due to Cascade)
+      // 4. Delete payments associated with this sale
+      await tx.payment.deleteMany({
+        where: { saleId },
+      });
+
+      // 5. Delete the sale (items will be deleted automatically due to Cascade)
       await tx.sale.delete({
         where: { id: saleId },
       });
@@ -258,10 +496,202 @@ export async function deleteSale(profileId: string, saleId: string) {
     revalidatePath("/sales");
     revalidatePath("/inventory");
     revalidatePath("/dashboard");
+    revalidatePath("/parties");
     return { success: true };
   } catch (e) {
     console.error("[deleteSale]", e);
     return { error: "Failed to delete sale" };
+  }
+}
+
+export async function updateSale(
+  profileId: string,
+  saleId: string,
+  data: {
+    partyId?: string;
+    items: { itemId?: string; name: string; quantity: number; rate: number; amount: number }[];
+    totalAmount: number;
+    discount: number;
+    tax: number;
+    grandTotal: number;
+    paymentMethod: string;
+    status: string;
+    remarks?: string;
+    date: Date;
+    dueDate?: Date;
+  }
+) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const method = data.paymentMethod.toLowerCase().includes("cash") ? "CASH" : "BANK";
+
+    const result = await db.$transaction(async (tx) => {
+      // Get existing sale with items
+      const existingSale = await tx.sale.findUnique({
+        where: { id: saleId, profileId },
+        include: { items: true },
+      });
+
+      if (!existingSale) throw new Error("Sale not found");
+
+      // Calculate inventory differences
+      const existingItemMap = new Map<string, number>(
+        existingSale.items
+          .filter(item => item.itemId !== null)
+          .map(item => [item.itemId as string, item.quantity])
+      );
+      const newItemMap = new Map<string, number>(
+        data.items
+          .filter(item => item.itemId !== undefined && item.itemId !== null)
+          .map(item => [item.itemId as string, item.quantity])
+      );
+
+      // Update inventory based on quantity changes
+      for (const [itemId, newQty] of newItemMap) {
+        if (itemId) {
+          const oldQty = existingItemMap.get(itemId) || 0;
+          const diff = oldQty - newQty;
+          
+          if (diff > 0) {
+            // Quantity decreased - add back to inventory
+            await tx.item.update({
+              where: { id: itemId },
+              data: { stockQuantity: { increment: diff } },
+            });
+          } else if (diff < 0) {
+            // Quantity increased - remove from inventory
+            await tx.item.update({
+              where: { id: itemId },
+              data: { stockQuantity: { decrement: Math.abs(diff) } },
+            });
+          }
+        }
+      }
+
+      // Handle removed items (add back to inventory)
+      for (const [itemId, oldQty] of existingItemMap) {
+        if (!newItemMap.has(itemId)) {
+          await tx.item.update({
+            where: { id: itemId as string },
+            data: { stockQuantity: { increment: oldQty } },
+          });
+        }
+      }
+
+      // Delete existing sale items
+      await tx.saleItem.deleteMany({
+        where: { saleId },
+      });
+
+      // Update sale
+      const updatedSale = await tx.sale.update({
+        where: { id: saleId },
+        data: {
+          partyId: data.partyId,
+          totalAmount: data.totalAmount,
+          discount: data.discount,
+          tax: data.tax,
+          grandTotal: data.grandTotal,
+          paymentMethod: method as PaymentMethod,
+          status: data.status,
+          remarks: data.remarks,
+          date: data.date,
+          dueDate: data.dueDate,
+        },
+      });
+
+      // Create new sale items
+      await Promise.all(
+        data.items.map((item) =>
+          tx.saleItem.create({
+            data: {
+              saleId,
+              itemId: item.itemId,
+              name: item.name,
+              quantity: item.quantity,
+              rate: item.rate,
+              amount: item.amount,
+            },
+          })
+        )
+      );
+
+      // Update party transactions if party changed or amounts changed
+      if (data.partyId || existingSale.partyId) {
+        // Delete old party transactions for this sale
+        await tx.partyTransaction.deleteMany({
+          where: {
+            profileId,
+            remarks: { contains: `Invoice #${existingSale.invoiceNo}` },
+          },
+        });
+
+        // Create new party transactions if party is selected
+        if (data.partyId) {
+          const lastPartyTx = await tx.partyTransaction.findFirst({
+            where: { profileId, type: PartyTxType.SALE },
+            orderBy: { receiptNumber: "desc" },
+          });
+          const nextReceiptNo = (lastPartyTx?.receiptNumber ?? 0) + 1;
+
+          // Record the Sale
+          await tx.partyTransaction.create({
+            data: {
+              partyId: data.partyId,
+              profileId,
+              receiptNumber: nextReceiptNo,
+              type: PartyTxType.SALE,
+              amount: data.grandTotal,
+              paymentMethod: method as PaymentMethod,
+              remarks: `Sale Invoice #${existingSale.invoiceNo}`,
+              date: data.date,
+            },
+          });
+
+          // Recalculate party balance
+          await recalculatePartyBalance(tx, data.partyId);
+        }
+
+        // Recalculate old party balance if party changed
+        if (existingSale.partyId && existingSale.partyId !== data.partyId) {
+          await recalculatePartyBalance(tx, existingSale.partyId);
+        }
+      }
+
+      // Update unified transaction
+      await tx.transaction.updateMany({
+        where: { profileId, referenceId: saleId },
+        data: {
+          amount: data.grandTotal,
+          description: `Sale Invoice #${existingSale.invoiceNo}`,
+          date: data.date,
+        },
+      });
+
+      return updatedSale;
+    }, {
+      timeout: 20000,
+    });
+
+    revalidatePath("/sales");
+    revalidatePath("/inventory");
+    revalidatePath("/dashboard");
+    revalidatePath("/parties");
+
+    return {
+      data: {
+        ...result,
+        totalAmount: Number(result.totalAmount),
+        discount: Number(result.discount),
+        tax: Number(result.tax),
+        grandTotal: Number(result.grandTotal),
+      }
+    };
+  } catch (e) {
+    console.error("[updateSale]", e);
+    return { error: "Failed to update sale" };
   }
 }
 

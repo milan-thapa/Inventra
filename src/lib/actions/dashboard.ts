@@ -256,8 +256,10 @@ export async function createReminder(
       profile.userId,
       input.type,
       `Reminder: ${input.title}`,
-      "/business-tools/reminders",
-      input.dueDate
+      {
+        link: "/business-tools/reminders",
+        expiresAt: input.dueDate,
+      }
     );
 
     return { data: reminder };

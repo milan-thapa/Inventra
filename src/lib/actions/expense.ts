@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import type { CreateExpenseInput } from "@/lib/validations/expense";
 
 async function verifyProfile(profileId: string) {
@@ -63,7 +64,7 @@ export async function getExpenses(
 
     return { data: serialize(expenses), total, page, limit };
   } catch (e) {
-    console.error("[getExpenses]", e);
+    logger.error("Failed to fetch expenses", e, { profileId, options });
     return { error: "Failed to fetch expenses" };
   }
 }
@@ -119,7 +120,7 @@ export async function createExpense(profileId: string, input: CreateExpenseInput
     revalidatePath("/dashboard");
     return { data: serialize(expense) };
   } catch (e) {
-    console.error("[createExpense]", e);
+    logger.error("Failed to create expense", e, { profileId, input });
     return { error: "Failed to create expense" };
   }
 }
@@ -146,7 +147,8 @@ export async function updateExpense(
     });
     revalidatePath("/expense");
     return { data: expense };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to update expense", e, { profileId, expenseId });
     return { error: "Failed to update expense" };
   }
 }
@@ -157,11 +159,19 @@ export async function deleteExpense(profileId: string, expenseId: string) {
   if (!profile) return { error: "Unauthorized" };
 
   try {
-    await db.expense.delete({ where: { id: expenseId } });
+    await db.$transaction(async (tx) => {
+      // Delete the unified transaction record first
+      await tx.transaction.deleteMany({
+        where: { profileId, referenceId: expenseId },
+      });
+      // Then delete the expense
+      await tx.expense.delete({ where: { id: expenseId } });
+    });
     revalidatePath("/expense");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to delete expense", e, { profileId, expenseId });
     return { error: "Failed to delete expense" };
   }
 }
@@ -181,7 +191,8 @@ export async function getExpenseCategories(profileId: string) {
       orderBy: { name: "asc" },
     });
     return { data: categories };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch expense categories", e, { profileId });
     return { error: "Failed to fetch categories" };
   }
 }
@@ -197,7 +208,8 @@ export async function createExpenseCategory(profileId: string, name: string) {
     });
     revalidatePath("/settings/feature-settings/transactions");
     return { data: category };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to create expense category", e, { profileId, name });
     return { error: "Category already exists or failed to create" };
   }
 }
@@ -211,7 +223,8 @@ export async function deleteExpenseCategory(profileId: string, categoryId: strin
     await db.expenseCategory.delete({ where: { id: categoryId } });
     revalidatePath("/settings/feature-settings/transactions");
     return { success: true };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to delete expense category", e, { profileId, categoryId });
     return { error: "Cannot delete category with existing expenses" };
   }
 }
@@ -265,7 +278,8 @@ export async function getIncomes(
     ]);
 
     return { data: serialize(incomes), total, page, limit };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch incomes", e, { profileId, options });
     return { error: "Failed to fetch incomes" };
   }
 }
@@ -320,7 +334,7 @@ export async function createIncome(profileId: string, input: CreateExpenseInput)
     revalidatePath("/dashboard");
     return { data: serialize(income) };
   } catch (e) {
-    console.error("[createIncome]", e);
+    logger.error("Failed to create income", e, { profileId, input });
     return { error: "Failed to create income" };
   }
 }
@@ -330,11 +344,19 @@ export async function deleteIncome(profileId: string, incomeId: string) {
   if (!profile) return { error: "Unauthorized" };
 
   try {
-    await db.income.delete({ where: { id: incomeId } });
+    await db.$transaction(async (tx) => {
+      // Delete the unified transaction record first
+      await tx.transaction.deleteMany({
+        where: { profileId, referenceId: incomeId },
+      });
+      // Then delete the income
+      await tx.income.delete({ where: { id: incomeId } });
+    });
     revalidatePath("/income");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to delete income", e, { profileId, incomeId });
     return { error: "Failed to delete income" };
   }
 }
@@ -349,7 +371,8 @@ export async function getIncomeCategories(profileId: string) {
       orderBy: { name: "asc" },
     });
     return { data: categories };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch income categories", e, { profileId });
     return { error: "Failed to fetch categories" };
   }
 }
@@ -364,7 +387,8 @@ export async function createIncomeCategory(profileId: string, name: string) {
     });
     revalidatePath("/settings/feature-settings/transactions");
     return { data: category };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to create income category", e, { profileId, name });
     return { error: "Category already exists or failed to create" };
   }
 }

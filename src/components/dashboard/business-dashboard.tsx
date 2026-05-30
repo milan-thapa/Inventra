@@ -7,6 +7,7 @@ import { UpcomingReminders } from "./upcoming-reminders";
 import { BusinessDashboardActions } from "./business-dashboard-actions";
 import { RecentTransactions } from "./recent-transactions";
 import { AIConsultant } from "./ai-consultant";
+import { TourTrigger } from "@/components/onboarding/tour-trigger";
 
 interface BusinessDashboardProps {
   profile: any;
@@ -27,6 +28,8 @@ export function BusinessDashboard({
 }: BusinessDashboardProps) {
   return (
     <div className="space-y-5">
+      <TourTrigger />
+      
       {/* Page header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">
@@ -36,7 +39,9 @@ export function BusinessDashboard({
       </div>
 
       {/* Stat cards */}
-      <BusinessStatCards stats={stats} />
+      <div data-tour="stat-cards">
+        <BusinessStatCards stats={stats} />
+      </div>
 
       {/* AI Consultant & Stock Alerts */}
       {/* <AIConsultant profileId={profile.id} /> */}
@@ -44,22 +49,21 @@ export function BusinessDashboard({
       {/* Main content grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Cashflow chart — takes 2 cols */}
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2" data-tour="cashflow-chart">
           <CashflowChart initialData={cashflow} profileId={profile.id} />
         </div>
 
         {/* Right panel */}
         <div className="space-y-4">
           <TotalBalance balance={stats.totalBalance} profileId={profile.id} />
-
-
-
           <UpcomingReminders reminders={reminders} profileId={profile.id} />
         </div>
       </div>
 
       {/* Recent transactions */}
-      <RecentTransactions transactions={recentTx} />
+      <div data-tour="recent-transactions">
+        <RecentTransactions transactions={recentTx} />
+      </div>
     </div>
   );
 }

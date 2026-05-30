@@ -23,7 +23,10 @@ const nextConfig = {
       { protocol: "https", hostname: "khalti.com" },
       { protocol: "https", hostname: "api.qrserver.com" },
     ],
+    formats: ['image/avif', 'image/webp'],
   },
+  compress: true,
+  poweredByHeader: false,
 };
 
 export default withBundleAnalyzer(nextConfig);

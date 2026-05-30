@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, ShoppingCart, Search, Filter, FileText, Download, MoreHorizontal, Trash2 } from "lucide-react";
+import { Plus, ShoppingCart, Search, Filter, FileText, Download, MoreHorizontal, Trash2, RotateCcw, Eye, Receipt, Calendar, User, ArrowRight, DollarSign, CheckCircle2, Clock, XCircle, ArrowDownLeft, FileCheck, Package } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export default function PurchasePage() {
@@ -36,6 +37,7 @@ export default function PurchasePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewPurchase, setViewPurchase] = useState<any>(null);
 
   const loadPurchases = useCallback(async () => {
     setLoading(true);
@@ -102,6 +104,16 @@ export default function PurchasePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Purchase Bills</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/purchase/returns">
+              <RotateCcw className="w-4 h-4 mr-2" /> Returns
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/purchase/out">
+              <ArrowDownLeft className="w-4 h-4 mr-2" /> Purchase Out
+            </Link>
+          </Button>
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" /> Export
           </Button>
@@ -128,66 +140,174 @@ export default function PurchasePage() {
         </Button>
       </div>
 
-      <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border/50">
-              <tr>
-                <th className="px-6 py-4 font-semibold">Date</th>
-                <th className="px-6 py-4 font-semibold">Bill No</th>
-                <th className="px-6 py-4 font-semibold">Party Name</th>
-                <th className="px-6 py-4 font-semibold text-center">Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Amount</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPurchases.map((purchase) => (
-                <tr key={purchase.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                  <td className="px-6 py-4 text-muted-foreground">{format(new Date(purchase.date), "dd MMM yyyy")}</td>
-                  <td className="px-6 py-4 font-medium">#{purchase.billNo}</td>
-                  <td className="px-6 py-4">{purchase.party?.name || "Cash Purchase"}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={cn(
-                      "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                      purchase.status === "PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
-                    )}>
-                      {purchase.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-blue-600">
-                    {formatCurrency(purchase.grandTotal, profile?.currency, profile?.currencyPos as any)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setDeleteId(purchase.id)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete Bill
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-              {filteredPurchases.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
-                    No purchase bills found matching &quot;{search}&quot;
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Card-based layout like Karobar app */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredPurchases.map((purchase) => (
+          <div key={purchase.id} className="bg-card border border-border/50 rounded-xl p-5 hover:border-blue-500/30 hover:shadow-lg transition-all group">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 flex items-center justify-center border border-blue-500/20">
+                  <Receipt className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">#{purchase.billNo}</h3>
+                  <p className="text-xs text-muted-foreground">{format(new Date(purchase.date), "dd MMM yyyy")}</p>
+                </div>
+              </div>
+              <span className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
+                purchase.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                purchase.status === "PARTIAL" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                "bg-rose-500/10 text-rose-600 border-rose-500/20"
+              )}>
+                {purchase.status === "PAID" ? <CheckCircle2 className="w-3 h-3" /> :
+                 purchase.status === "PARTIAL" ? <Clock className="w-3 h-3" /> :
+                 <XCircle className="w-3 h-3" />}
+                {purchase.status}
+              </span>
+            </div>
+
+            {/* Supplier */}
+            <div className="flex items-center gap-2 mb-4">
+              <User className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-foreground">{purchase.party?.name || "Cash Purchase"}</span>
+            </div>
+
+            {/* Amount */}
+            <div className="flex items-center justify-between mb-4 pt-4 border-t border-border/50">
+              <span className="text-sm text-muted-foreground">Total Amount</span>
+              <span className="text-lg font-bold text-blue-600">
+                {formatCurrency(purchase.grandTotal, profile?.currency, profile?.currencyPos as any)}
+              </span>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1"
+                onClick={() => setViewPurchase(purchase)}
+              >
+                <Eye className="w-4 h-4 mr-2" /> View
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.print()}
+              >
+                <Receipt className="w-4 h-4 mr-2" /> Print
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteId(purchase.id)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete Bill
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        ))}
       </div>
+
+      {filteredPurchases.length === 0 && (
+        <div className="text-center py-12">
+          <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground mb-4">No purchase bills found matching &quot;{search}&quot;</p>
+        </div>
+      )}
+
+      {/* View Purchase Dialog */}
+      {viewPurchase && (
+        <Dialog open={!!viewPurchase} onOpenChange={() => setViewPurchase(null)}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Purchase Bill #{viewPurchase.billNo}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Date</p>
+                  <p className="font-medium">{format(new Date(viewPurchase.date), "dd MMM yyyy")}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Supplier</p>
+                  <p className="font-medium">{viewPurchase.party?.name || "Cash Purchase"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <span className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
+                    viewPurchase.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                    viewPurchase.status === "PARTIAL" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                    "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                  )}>
+                    {viewPurchase.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment Method</p>
+                  <p className="font-medium">{viewPurchase.paymentMethod}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-semibold text-foreground">Items</h4>
+                <div className="space-y-2">
+                  {viewPurchase.items.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between py-2 border-b border-border/30">
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">Qty: {item.quantity} × {formatCurrency(item.rate, profile?.currency, profile?.currencyPos as any)}</p>
+                      </div>
+                      <p className="font-semibold text-foreground">{formatCurrency(item.amount, profile?.currency, profile?.currencyPos as any)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Total Amount</span>
+                  <span className="font-medium">{formatCurrency(viewPurchase.totalAmount, profile?.currency, profile?.currencyPos as any)}</span>
+                </div>
+                {viewPurchase.discount > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="font-medium text-emerald-600">-{formatCurrency(viewPurchase.discount, profile?.currency, profile?.currencyPos as any)}</span>
+                  </div>
+                )}
+                {viewPurchase.tax > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Tax</span>
+                    <span className="font-medium">{formatCurrency(viewPurchase.tax, profile?.currency, profile?.currencyPos as any)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                  <span className="text-lg font-bold text-foreground">Grand Total</span>
+                  <span className="text-2xl font-bold text-blue-600">{formatCurrency(viewPurchase.grandTotal, profile?.currency, profile?.currencyPos as any)}</span>
+                </div>
+              </div>
+
+              {viewPurchase.remarks && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Remarks</p>
+                  <p className="text-foreground">{viewPurchase.remarks}</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

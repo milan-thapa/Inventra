@@ -28,6 +28,8 @@ model User {
   sessions Session[]
   profiles Profile[]
   notifications Notification[]
+  notificationPreferences NotificationPreference[]
+  stockMovements StockMovement[]
 }
 
 model Account {
@@ -90,6 +92,12 @@ model Profile {
   theme          String      @default("dark")   // "dark" | "light" | "classic"
   privacyMode    Boolean     @default(false)
   appLock        Boolean     @default(false)
+  
+  // Tax Settings
+  taxEnabled      Boolean     @default(false)
+  taxType         String      @default("GST") // "GST" | "VAT" | "SALES_TAX"
+  taxRate         Decimal     @default(0) @db.Decimal(5, 2) // Tax percentage
+  taxNumber       String?     // GSTIN/VAT number
 
   // Subscription
   subscriptionPlan String   @default("trial")
@@ -110,10 +118,17 @@ model Profile {
   incomeCategories  IncomeCategory[]
   transactions      Transaction[]
   notifications     Notification[]
+  notificationPreferences NotificationPreference[]
   items             Item[]
   sales             Sale[]
+  payments          Payment[]
   purchases         Purchase[]
   itemCategories    ItemCategory[]
+  quotations        Quotation[]
+  salesReturns      SalesReturn[]
+  discounts         Discount[]
+  purchaseReturns   PurchaseReturn[]
+  stockMovements    StockMovement[]
 
   @@index([userId])
 }
@@ -144,20 +159,39 @@ model Party {
   openingBalance Decimal     @default(0) @db.Decimal(15, 2)
   openingDate    DateTime    @default(now())
   balanceType    BalanceType @default(TO_RECEIVE)
+  creditLimit    Decimal     @default(0) @db.Decimal(15, 2)
+  type           PartyType   @default(CUSTOMER) // "CUSTOMER" | "SUPPLIER" | "BOTH"
+  deletedAt      DateTime?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
   partyTransactions PartyTransaction[]
   sales             Sale[]
   purchases         Purchase[]
+  quotations        Quotation[]
+  salesReturns      SalesReturn[]
+  payments          Payment[]
+  purchaseReturns   PurchaseReturn[]
+  suppliedItems     Item[] @relation("ItemSupplier")
+  batchSupplies     ItemBatch[]
 
   @@index([profileId])
+  @@index([profileId, balanceType])
+  @@index([profileId, name])
+  @@index([profileId, type])
+  @@index([deletedAt])
 }
 
 enum BalanceType {
   TO_RECEIVE
   TO_GIVE
   SETTLED
+}
+
+enum PartyType {
+  CUSTOMER
+  SUPPLIER
+  BOTH
 }
 
 model PartyTransaction {
@@ -213,6 +247,8 @@ model Expense {
 
   @@index([profileId])
   @@index([categoryId])
+  @@index([profileId, date])
+  @@index([profileId, paymentMethod])
 }
 
 model ExpenseItem {
@@ -260,6 +296,8 @@ model Income {
 
   @@index([profileId])
   @@index([categoryId])
+  @@index([profileId, date])
+  @@index([profileId, paymentMethod])
 }
 
 model IncomeItem {
@@ -321,6 +359,8 @@ model Transaction {
 
   @@index([profileId])
   @@index([date])
+  @@index([profileId, date])
+  @@index([profileId, type])
 }
 
 enum TransactionType {
@@ -393,17 +433,42 @@ model BillImage {
 // ─────────────────────────────────────────
 
 model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type        String
+  category    String   @default("GENERAL") // "GENERAL", "SALES", "PURCHASE", "PAYMENT", "REMINDER", "SYSTEM"
+  priority    String   @default("NORMAL") // "LOW", "NORMAL", "HIGH", "URGENT"
+  message     String
+  link        String?
+  isRead      Boolean  @default(false)
+  expiresAt   DateTime?
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([profileId])
+  @@index([userId, isRead])
+  @@index([userId, category])
+  @@index([userId, priority])
+  @@index([expiresAt])
+}
+
+model NotificationPreference {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   profileId String
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  type      String
-  message   String
-  link      String?
-  isRead    Boolean  @default(false)
+  category  String   // "GENERAL", "SALES", "PURCHASE", "PAYMENT", "REMINDER", "SYSTEM"
+  channel   String   @default("IN_APP") // "IN_APP", "EMAIL", "PUSH", "SMS"
+  enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([userId, profileId, category, channel])
   @@index([userId])
   @@index([profileId])
 }
@@ -418,22 +483,45 @@ model Item {
   profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   name           String
   sku            String?
+  barcode        String?
   purchasePrice  Decimal  @default(0) @db.Decimal(15, 2)
   sellingPrice   Decimal  @default(0) @db.Decimal(15, 2)
   stockQuantity  Int      @default(0)
   unit           String?
   type           String   @default("PRODUCT") // "PRODUCT" | "SERVICE"
-  description    String?
+  description    String?  @db.Text
+  specifications String?  @db.Text
+  images         String[] // Array of image URLs
+  brand          String?
+  manufacturer   String?
+  supplierId     String?
+  supplier       Party?   @relation("ItemSupplier", fields: [supplierId], references: [id])
+  reorderPoint   Int      @default(10)
+  maxStock       Int?
+  weight         Decimal? @db.Decimal(10, 3)
+  dimensions     String?  // JSON string for dimensions
+  shelfLocation  String?
+  deletedAt      DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   saleItems      SaleItem[]
   purchaseItems  PurchaseItem[]
+  quotationItems QuotationItem[]
+  salesReturnItems SalesReturnItem[]
+  purchaseReturnItems PurchaseReturnItem[]
+  stockMovements StockMovement[]
+  itemBatches    ItemBatch[]
+  itemVariants   ItemVariant[]
+  itemLocations  ItemLocation[]
 
   categoryId     String?
   category       ItemCategory? @relation(fields: [categoryId], references: [id])
 
   @@index([profileId])
+  @@index([deletedAt])
+  @@index([supplierId])
+  @@index([barcode])
 }
 
 model ItemCategory {
@@ -447,6 +535,97 @@ model ItemCategory {
 
   @@unique([profileId, name])
   @@index([profileId])
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type        String   // "ADD", "REDUCE", "SALE", "PURCHASE", "ADJUSTMENT", "TRANSFER_IN", "TRANSFER_OUT"
+  quantity    Int
+  previousQty Int
+  newQty      Int
+  reason      String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId String?  // Reference to sale, purchase, etc.
+  referenceType String? // "SALE", "PURCHASE", "ADJUSTMENT", "TRANSFER"
+  batchId     String?
+  locationId  String?
+  createdAt   DateTime @default(now())
+
+  @@index([itemId])
+  @@index([profileId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([referenceId])
+}
+
+// Item Batch/Lot Tracking
+model ItemBatch {
+  id          String   @id @default(cuid())
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  profileId   String
+  batchNumber String
+  expiryDate  DateTime?
+  quantity    Int
+  purchasePrice Decimal @db.Decimal(15, 2)
+  supplierId  String?
+  supplier    Party?   @relation(fields: [supplierId], references: [id])
+  locationId  String?
+  location    ItemLocation? @relation(fields: [locationId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([itemId])
+  @@index([profileId])
+  @@index([batchNumber])
+  @@index([expiryDate])
+}
+
+// Item Variants (size, color, etc.)
+model ItemVariant {
+  id          String   @id @default(cuid())
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  profileId   String
+  name        String   // e.g., "Red", "Large", "XL"
+  type        String   // "COLOR", "SIZE", "MATERIAL", "STYLE"
+  sku         String?
+  barcode     String?
+  priceAdjust Decimal  @default(0) @db.Decimal(15, 2) // Price difference from base price
+  stockQuantity Int     @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([itemId])
+  @@index([profileId])
+  @@index([type])
+}
+
+// Item Locations (multiple warehouses/locations)
+model ItemLocation {
+  id          String   @id @default(cuid())
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  profileId   String
+  name        String   // e.g., "Warehouse A", "Store Front", "Back Room"
+  address     String?
+  stockQuantity Int   @default(0)
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  batches     ItemBatch[]
+
+  @@index([itemId])
+  @@index([profileId])
+  @@index([isDefault])
 }
 
 // ─────────────────────────────────────────
@@ -464,17 +643,25 @@ model Sale {
   discount      Decimal   @default(0) @db.Decimal(15, 2)
   tax           Decimal   @default(0) @db.Decimal(15, 2)
   grandTotal    Decimal   @db.Decimal(15, 2)
+  receivedAmount Decimal  @default(0) @db.Decimal(15, 2)
   paymentMethod PaymentMethod @default(CASH)
   status        String    @default("PAID") // "PAID", "UNPAID", "PARTIAL"
   remarks       String?
   date          DateTime  @default(now())
+  dueDate       DateTime?
+  deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   items         SaleItem[]
+  salesReturns  SalesReturn[]
+  payments      Payment[]
 
   @@index([profileId])
   @@index([partyId])
+  @@index([profileId, date])
+  @@index([profileId, status])
+  @@index([deletedAt])
 }
 
 model SaleItem {
@@ -487,6 +674,44 @@ model SaleItem {
   quantity  Int
   rate      Decimal @db.Decimal(15, 2)
   amount    Decimal @db.Decimal(15, 2)
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  profileId     String
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  saleId        String
+  sale          Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  partyId       String?
+  party         Party?    @relation(fields: [partyId], references: [id])
+  amount        Decimal   @db.Decimal(15, 2)
+  paymentMethod PaymentMethod @default(CASH)
+  date          DateTime  @default(now())
+  remarks       String?
+  createdAt     DateTime  @default(now())
+
+  @@index([profileId])
+  @@index([saleId])
+  @@index([partyId])
+}
+
+model Discount {
+  id            String    @id @default(cuid())
+  profileId     String
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name          String
+  type          String    @default("PERCENTAGE") // "PERCENTAGE" | "FIXED_AMOUNT"
+  value         Decimal   @db.Decimal(15, 2)
+  minValue      Decimal?  @db.Decimal(15, 2)
+  maxValue      Decimal?  @db.Decimal(15, 2)
+  applicableTo  String?   // "ALL" | "SPECIFIC_ITEMS" | "SPECIFIC_CUSTOMERS"
+  startDate     DateTime?
+  endDate       DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([profileId])
 }
 
 // ─────────────────────────────────────────
@@ -508,13 +733,18 @@ model Purchase {
   status        String    @default("PAID") // "PAID", "UNPAID", "PARTIAL"
   remarks       String?
   date          DateTime  @default(now())
+  deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   items         PurchaseItem[]
+  purchaseReturns PurchaseReturn[]
 
   @@index([profileId])
   @@index([partyId])
+  @@index([profileId, date])
+  @@index([profileId, status])
+  @@index([deletedAt])
 }
 
 model PurchaseItem {
@@ -527,5 +757,127 @@ model PurchaseItem {
   quantity    Int
   rate        Decimal   @db.Decimal(15, 2)
   amount      Decimal   @db.Decimal(15, 2)
+}
+
+// ─────────────────────────────────────────
+// QUOTATIONS
+// ─────────────────────────────────────────
+
+model Quotation {
+  id            String    @id @default(cuid())
+  profileId     String
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  quotationNo   Int
+  partyId       String?
+  party         Party?    @relation(fields: [partyId], references: [id])
+  totalAmount   Decimal   @db.Decimal(15, 2)
+  discount      Decimal   @default(0) @db.Decimal(15, 2)
+  tax           Decimal   @default(0) @db.Decimal(15, 2)
+  grandTotal    Decimal   @db.Decimal(15, 2)
+  status        String    @default("DRAFT") // "DRAFT", "SENT", "ACCEPTED", "REJECTED", "CONVERTED"
+  remarks       String?
+  validUntil    DateTime?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items         QuotationItem[]
+
+  @@index([profileId])
+  @@index([partyId])
+}
+
+model QuotationItem {
+  id           String     @id @default(cuid())
+  quotationId  String
+  quotation    Quotation  @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  itemId       String?
+  item         Item?      @relation(fields: [itemId], references: [id])
+  name         String     // Captured at time of quotation
+  quantity     Int
+  rate         Decimal    @db.Decimal(15, 2)
+  amount       Decimal    @db.Decimal(15, 2)
+}
+
+// ─────────────────────────────────────────
+// SALES RETURNS
+// ─────────────────────────────────────────
+
+model SalesReturn {
+  id            String    @id @default(cuid())
+  profileId     String
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  returnNo      Int
+  saleId        String?
+  sale          Sale?     @relation(fields: [saleId], references: [id])
+  partyId       String?
+  party         Party?    @relation(fields: [partyId], references: [id])
+  totalAmount   Decimal   @db.Decimal(15, 2)
+  refundAmount  Decimal   @db.Decimal(15, 2)
+  reason        String?
+  status        String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "COMPLETED"
+  remarks       String?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items         SalesReturnItem[]
+
+  @@index([profileId])
+  @@index([saleId])
+  @@index([partyId])
+}
+
+model SalesReturnItem {
+  id             String       @id @default(cuid())
+  salesReturnId  String
+  salesReturn    SalesReturn  @relation(fields: [salesReturnId], references: [id], onDelete: Cascade)
+  itemId         String?
+  item           Item?        @relation(fields: [itemId], references: [id])
+  name           String       // Captured at time of return
+  quantity       Int
+  rate           Decimal      @db.Decimal(15, 2)
+  amount         Decimal      @db.Decimal(15, 2)
+}
+
+// ─────────────────────────────────────────
+// PURCHASE RETURNS
+// ─────────────────────────────────────────
+
+model PurchaseReturn {
+  id            String    @id @default(cuid())
+  profileId     String
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  returnNo      Int
+  purchaseId    String?
+  purchase      Purchase? @relation(fields: [purchaseId], references: [id])
+  partyId       String?
+  party         Party?    @relation(fields: [partyId], references: [id])
+  totalAmount   Decimal   @db.Decimal(15, 2)
+  refundAmount  Decimal   @db.Decimal(15, 2)
+  reason        String?
+  status        String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "COMPLETED"
+  remarks       String?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items         PurchaseReturnItem[]
+
+  @@index([profileId])
+  @@index([purchaseId])
+  @@index([partyId])
+}
+
+model PurchaseReturnItem {
+  id                String         @id @default(cuid())
+  purchaseReturnId  String
+  purchaseReturn    PurchaseReturn @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  itemId            String?
+  item              Item?          @relation(fields: [itemId], references: [id])
+  name              String         // Captured at time of return
+  quantity          Int
+  rate              Decimal        @db.Decimal(15, 2)
+  amount            Decimal        @db.Decimal(15, 2)
 }
 

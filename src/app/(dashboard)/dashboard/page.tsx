@@ -12,6 +12,7 @@ import { UpcomingReminders } from "@/components/dashboard/upcoming-reminders";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { DashboardActions } from "@/components/dashboard/dashboard-actions";
 import { BusinessDashboard } from "@/components/dashboard/business-dashboard";
+import { TourTrigger } from "@/components/onboarding/tour-trigger";
 
 export const metadata = { title: "Dashboard" };
 
@@ -57,6 +58,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      <TourTrigger />
+      
       {/* Page header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">
@@ -66,12 +69,14 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <StatCards stats={stats as any} />
+      <div data-tour="stat-cards">
+        <StatCards stats={stats as any} />
+      </div>
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Cashflow chart — takes 2 cols */}
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2" data-tour="cashflow-chart">
           <CashflowChart initialData={cashflow} profileId={profileId} />
         </div>
 
@@ -83,7 +88,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent transactions */}
-      <RecentTransactions transactions={recentTx} />
+      <div data-tour="recent-transactions">
+        <RecentTransactions transactions={recentTx} />
+      </div>
     </div>
   );
 }

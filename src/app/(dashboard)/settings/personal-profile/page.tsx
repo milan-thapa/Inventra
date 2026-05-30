@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useProfileStore } from "@/stores/profile-store";
 import { BUSINESS_CATEGORIES } from "@/lib/constants";
+import { updatePersonalProfile } from "@/lib/actions/profile";
 
 export default function PersonalProfilePage() {
   const { toast } = useToast();
-  const { getActiveProfile } = useProfileStore();
+  const { activeProfileId, getActiveProfile, updateActiveProfile } = useProfileStore();
   const profile = getActiveProfile();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -32,10 +33,26 @@ export default function PersonalProfilePage() {
   }, [profile]);
 
   const handleSave = async () => {
+    if (!activeProfileId) {
+      toast({ variant: "destructive", title: "No active profile found" });
+      return;
+    }
+    
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    toast({ title: "Profile updated successfully" });
+    try {
+      const res = await updatePersonalProfile(activeProfileId, form);
+      if (res.error) {
+        toast({ variant: "destructive", title: "Error", description: res.error });
+      } else {
+        toast({ title: "Profile updated successfully" });
+        // Update local store
+        updateActiveProfile(form as any);
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to update profile" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
