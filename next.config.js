@@ -11,7 +11,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000", "inventra.vercel.app"],
+      allowedOrigins: ["localhost:3000", "inventra1.vercel.app"],
       bodySizeLimit: "2mb",
     },
   },

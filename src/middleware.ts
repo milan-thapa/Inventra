@@ -57,10 +57,10 @@ export default auth((req) => {
     return addSecurityHeaders(response);
   }
 
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
   const isDashboardRoute = pathname.startsWith("/dashboard") ||
     pathname.startsWith("/parties") ||
     pathname.startsWith("/expense") ||
@@ -74,19 +74,31 @@ export default auth((req) => {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/onboarding");
 
-  // Allow public routes to pass through without auth checks
-  if (isPublicRoute && !isAuthRoute) {
+  // Auth routes (e.g. /login): allow unauthenticated users, redirect authenticated users to dashboard
+  if (isAuthRoute) {
+    if (isLoggedIn) {
+      response = NextResponse.redirect(new URL("/dashboard", nextUrl));
+      return addSecurityHeaders(response);
+    }
+    // Not logged in — let them access /login
     return addSecurityHeaders(response);
   }
 
-  // Redirect logged-in users away from auth routes
-  if (isAuthRoute && isLoggedIn) {
-    response = NextResponse.redirect(new URL("/dashboard", nextUrl));
+  // Allow other public routes to pass through without auth checks
+  if (isPublicRoute) {
     return addSecurityHeaders(response);
   }
 
   // Redirect unauthenticated users from protected routes
   if (isDashboardRoute && !isLoggedIn) {
+    const loginUrl = new URL("/login", nextUrl);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    response = NextResponse.redirect(loginUrl);
+    return addSecurityHeaders(response);
+  }
+
+  // For any other unmatched route that requires auth
+  if (!isLoggedIn && !isPublicRoute) {
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("callbackUrl", pathname);
     response = NextResponse.redirect(loginUrl);
