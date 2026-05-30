@@ -58,7 +58,7 @@ export function NotificationsPanel() {
   const getIconBgClass = (type: string, priority: string) => {
     if (priority === "URGENT") return "bg-red-500/15 text-red-500";
     if (priority === "HIGH") return "bg-orange-500/15 text-orange-500";
-    if (priority === "LOW") return "bg-gray-500/15 text-gray-500";
+    if (priority === "LOW") return "bg-muted text-muted-foreground";
     
     switch (type) {
       case "PAYMENT":

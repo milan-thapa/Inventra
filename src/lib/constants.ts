@@ -82,7 +82,6 @@ export const CALENDAR_TYPES = [
 // ── Currency Options ──────────────────────────────────────
 export const CURRENCIES = [
   { value: "Rs.", label: "Rs. — Nepali Rupee", symbol: "Rs." },
-  { value: "$", label: "$ — US Dollar", symbol: "$" },
   { value: "₹", label: "₹ — Indian Rupee", symbol: "₹" },
 ] as const;
 

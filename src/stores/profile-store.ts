@@ -23,6 +23,7 @@ interface Profile {
   taxRate: number;
   taxType: string;
   taxNumber?: string;
+  barcodeEnabled?: boolean;
   subscriptionPlan: string;
   subscriptionEnd?: Date;
   isDefault: boolean;

@@ -64,73 +64,103 @@ export async function createProfile(input: CreateProfileInput) {
 
   try {
     // Ensure user exists in database
-    const user = await db.user.findUnique({
+    let user = await db.user.findUnique({
       where: { id: session.user.id },
     });
     
+    if (!user && session.user.email) {
+      user = await db.user.findUnique({
+        where: { email: session.user.email }
+      });
+    }
+    
     if (!user) {
       // Create user if they don't exist (can happen with JWT sessions)
-      await db.user.create({
-        data: {
-          id: session.user.id,
-          name: session.user.name,
-          email: session.user.email,
-          image: session.user.image,
-        },
-      });
+      try {
+        user = await db.user.create({
+          data: {
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email,
+            image: session.user.image,
+          },
+        });
+      } catch (userError) {
+        console.error("[createProfile] Failed to create user:", userError);
+        return { error: "Failed to create user account" };
+      }
     }
 
     // Check if this is the first profile
     const existingCount = await db.profile.count({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
     });
 
-    const profile = await db.profile.create({
-      data: {
-        userId: session.user.id,
-        type: input.type as "BUSINESS" | "PERSONAL",
-        name: input.name,
-        category: input.category || null,
-        logo: input.logo || null,
-        address: input.address || null,
-        isDefault: existingCount === 0,
-      },
-    });
+    let profile;
+    try {
+      profile = await db.profile.create({
+        data: {
+          userId: user.id,
+          type: input.type as "BUSINESS" | "PERSONAL",
+          name: input.name,
+          category: input.category || null,
+          logo: input.logo || null,
+          address: input.address || null,
+          isDefault: existingCount === 0,
+        },
+      });
+    } catch (profileError) {
+      console.error("[createProfile] Failed to create profile:", profileError);
+      return { error: "Failed to create profile. Please try again." };
+    }
 
     // Seed default categories for the new profile
-    await Promise.all([
-      ...DEFAULT_EXPENSE_CATEGORIES.map((name) =>
-        db.expenseCategory.create({
-          data: { profileId: profile.id, name, isDefault: true },
-        })
-      ),
-      ...DEFAULT_INCOME_CATEGORIES.map((name) =>
-        db.incomeCategory.create({
-          data: { profileId: profile.id, name, isDefault: true },
-        })
-      ),
-      ...DEFAULT_ITEM_CATEGORIES.map((name) =>
-        db.itemCategory.create({
-          data: { profileId: profile.id, name },
-        })
-      ),
-      // Create default Cash account
-      db.bankAccount.create({
-        data: {
-          profileId: profile.id,
-          type: "Cash",
-          bankName: "Cash",
-          holderName: input.name,
-          currentBalance: 0,
-        },
-      }),
-    ]);
+    try {
+      await Promise.all([
+        ...DEFAULT_EXPENSE_CATEGORIES.map((name) =>
+          db.expenseCategory.create({
+            data: { profileId: profile.id, name, isDefault: true },
+          }).catch(e => {
+            console.error(`[createProfile] Failed to create expense category "${name}":`, e);
+          })
+        ),
+        ...DEFAULT_INCOME_CATEGORIES.map((name) =>
+          db.incomeCategory.create({
+            data: { profileId: profile.id, name, isDefault: true },
+          }).catch(e => {
+            console.error(`[createProfile] Failed to create income category "${name}":`, e);
+          })
+        ),
+        ...DEFAULT_ITEM_CATEGORIES.map((name) =>
+          db.itemCategory.create({
+            data: { profileId: profile.id, name },
+          }).catch(e => {
+            console.error(`[createProfile] Failed to create item category "${name}":`, e);
+          })
+        ),
+        // Create default Cash account
+        db.bankAccount.create({
+          data: {
+            profileId: profile.id,
+            type: "Cash",
+            bankName: "Cash",
+            holderName: input.name,
+            currentBalance: 0,
+          },
+        }).catch(e => {
+          console.error("[createProfile] Failed to create default Cash account:", e);
+        }),
+      ]);
+    } catch (seedError) {
+      console.error("[createProfile] Failed to seed default data:", seedError);
+      // Don't fail the entire profile creation if seeding fails
+    }
 
     revalidatePath("/dashboard");
     return { data: profile };
   } catch (e) {
-    console.error("[createProfile]", e);
-    return { error: "Failed to create profile" };
+    console.error("[createProfile] Unexpected error:", e);
+    return { error: "An unexpected error occurred. Please try again." };
   }
 }
 
@@ -190,12 +220,14 @@ export async function updateProfileSettings(
         ...(settings.privacyMode !== undefined && { privacyMode: settings.privacyMode }),
         ...(settings.appLock !== undefined && { appLock: settings.appLock }),
         ...(settings.numberFormat && { numberFormat: settings.numberFormat }),
+        ...(settings.barcodeEnabled !== undefined && { barcodeEnabled: settings.barcodeEnabled }),
       },
     });
 
     revalidatePath("/settings");
     return { data: updated };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to update profile settings", e, { profileId, settings });
     return { error: "Failed to update settings" };
   }
 }
@@ -367,10 +399,15 @@ export async function getFeatureSettings(profileId: string) {
 // ── Check if user has profiles ────────────────────────────
 export async function hasProfiles(): Promise<boolean> {
   const session = await auth();
-  if (!session?.user?.id) return false;
+  if (!session?.user?.id) {
+    console.log("[hasProfiles] No session or user ID");
+    return false;
+  }
 
+  console.log("[hasProfiles] Checking profiles for user:", session.user.id);
   const count = await db.profile.count({
     where: { userId: session.user.id },
   });
+  console.log("[hasProfiles] Profile count:", count);
   return count > 0;
 }

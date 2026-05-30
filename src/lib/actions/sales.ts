@@ -6,11 +6,76 @@ import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, BalanceType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
 import { logger } from "@/lib/logger";
+import { withRateLimit } from "@/lib/ratelimit";
+import { withErrorHandler, UnauthorizedError, ValidationError } from "@/lib/error-handler";
+import { createSaleSchema, recordPaymentSchema } from "@/lib/validations/sales";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
   if (!session?.user?.id) return null;
   return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
+}
+
+export async function getSale(profileId: string, saleId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const sale = await db.sale.findFirst({
+      where: { id: saleId, profileId },
+      include: {
+        party: true,
+        items: true,
+        payments: true,
+      },
+    });
+
+    if (!sale) return { error: "Sale not found" };
+
+    const totalReceived = sale.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    const remainingAmount = Number(sale.grandTotal) - totalReceived;
+
+    let status = sale.status;
+    if (sale.payments.length > 0) {
+      if (totalReceived >= Number(sale.grandTotal)) {
+        status = "PAID";
+      } else if (totalReceived > 0) {
+        status = "PARTIAL";
+      } else {
+        status = "UNPAID";
+      }
+    }
+
+    return {
+      data: {
+        ...sale,
+        totalAmount: Number(sale.totalAmount),
+        discount: Number(sale.discount),
+        tax: Number(sale.tax),
+        grandTotal: Number(sale.grandTotal),
+        receivedAmount: Number(sale.receivedAmount || 0),
+        totalReceived,
+        remainingAmount,
+        status,
+        party: sale.party ? {
+          ...sale.party,
+          openingBalance: Number(sale.party.openingBalance)
+        } : null,
+        items: sale.items.map(item => ({
+          ...item,
+          rate: Number(item.rate),
+          amount: Number(item.amount)
+        })),
+        payments: sale.payments.map(payment => ({
+          ...payment,
+          amount: Number(payment.amount)
+        }))
+      }
+    };
+  } catch (e) {
+    console.error("[getSale]", e);
+    return { error: "Failed to fetch sale" };
+  }
 }
 
 export async function getSales(profileId: string) {
@@ -114,10 +179,18 @@ export async function createSale(
     dueDate?: Date;
   }
 ) {
-  const profile = await verifyProfile(profileId);
-  if (!profile) return { error: "Unauthorized" };
+  return withErrorHandler(async () => {
+    const session = await auth();
+    if (!session?.user?.id) throw new UnauthorizedError();
 
-  try {
+    // Apply rate limiting for sale creation
+    await withRateLimit(session.user.id, "createSale", () => Promise.resolve(), 20, 60 * 1000);
+
+    // Validate input
+    const validatedData = createSaleSchema.parse(data);
+
+    const profile = await verifyProfile(profileId);
+    if (!profile) throw new UnauthorizedError();
     // Check credit limit if party is selected
     if (data.partyId) {
       const party = await db.party.findUnique({
@@ -286,10 +359,7 @@ export async function createSale(
         grandTotal: Number(result.grandTotal),
       }
     };
-  } catch (e) {
-    console.error("[createSale]", e);
-    return { error: "Failed to create sale" };
-  }
+  }, "createSale");
 }
 
 export async function recordPayment(
@@ -302,10 +372,18 @@ export async function recordPayment(
     date: Date;
   }
 ) {
-  const profile = await verifyProfile(profileId);
-  if (!profile) return { error: "Unauthorized" };
+  return withErrorHandler(async () => {
+    const session = await auth();
+    if (!session?.user?.id) throw new UnauthorizedError();
 
-  try {
+    // Apply rate limiting for payment recording
+    await withRateLimit(session.user.id, "recordPayment", () => Promise.resolve(), 30, 60 * 1000);
+
+    // Validate input
+    const validatedData = recordPaymentSchema.parse(data);
+
+    const profile = await verifyProfile(profileId);
+    if (!profile) throw new UnauthorizedError();
     const sale = await db.sale.findUnique({
       where: { id: saleId, profileId },
       include: { payments: true, party: true },
@@ -372,17 +450,16 @@ export async function recordPayment(
     if (sale.partyId) revalidatePath(`/parties/${sale.partyId}`);
 
     return { data: result };
-  } catch (e) {
-    console.error("[recordPayment]", e);
-    return { error: "Failed to record payment" };
-  }
+  }, "recordPayment");
 }
 
 export async function deletePayment(profileId: string, paymentId: string) {
-  const profile = await verifyProfile(profileId);
-  if (!profile) return { error: "Unauthorized" };
+  return withErrorHandler(async () => {
+    const session = await auth();
+    if (!session?.user?.id) throw new UnauthorizedError();
 
-  try {
+    const profile = await verifyProfile(profileId);
+    if (!profile) throw new UnauthorizedError();
     const payment = await db.payment.findUnique({
       where: { id: paymentId, profileId },
       include: { sale: { include: { payments: true, party: true } } },
@@ -431,17 +508,19 @@ export async function deletePayment(profileId: string, paymentId: string) {
     if (payment.partyId) revalidatePath(`/parties/${payment.partyId}`);
 
     return { success: true };
-  } catch (e) {
-    console.error("[deletePayment]", e);
-    return { error: "Failed to delete payment" };
-  }
+  }, "deletePayment");
 }
 
 export async function deleteSale(profileId: string, saleId: string) {
-  const profile = await verifyProfile(profileId);
-  if (!profile) return { error: "Unauthorized" };
+  return withErrorHandler(async () => {
+    const session = await auth();
+    if (!session?.user?.id) throw new UnauthorizedError();
 
-  try {
+    // Apply rate limiting for sale deletion
+    await withRateLimit(session.user.id, "deleteSale", () => Promise.resolve(), 10, 60 * 1000);
+
+    const profile = await verifyProfile(profileId);
+    if (!profile) throw new UnauthorizedError();
     const sale = await db.sale.findUnique({
       where: { id: saleId, profileId },
       include: { items: true, payments: true },
@@ -498,10 +577,7 @@ export async function deleteSale(profileId: string, saleId: string) {
     revalidatePath("/dashboard");
     revalidatePath("/parties");
     return { success: true };
-  } catch (e) {
-    console.error("[deleteSale]", e);
-    return { error: "Failed to delete sale" };
-  }
+  }, "deleteSale");
 }
 
 export async function updateSale(
@@ -521,10 +597,18 @@ export async function updateSale(
     dueDate?: Date;
   }
 ) {
-  const profile = await verifyProfile(profileId);
-  if (!profile) return { error: "Unauthorized" };
+  return withErrorHandler(async () => {
+    const session = await auth();
+    if (!session?.user?.id) throw new UnauthorizedError();
 
-  try {
+    // Apply rate limiting for sale updates
+    await withRateLimit(session.user.id, "updateSale", () => Promise.resolve(), 20, 60 * 1000);
+
+    // Validate input
+    const validatedData = createSaleSchema.parse(data);
+
+    const profile = await verifyProfile(profileId);
+    if (!profile) throw new UnauthorizedError();
     const method = data.paymentMethod.toLowerCase().includes("cash") ? "CASH" : "BANK";
 
     const result = await db.$transaction(async (tx) => {
@@ -689,9 +773,6 @@ export async function updateSale(
         grandTotal: Number(result.grandTotal),
       }
     };
-  } catch (e) {
-    console.error("[updateSale]", e);
-    return { error: "Failed to update sale" };
-  }
+  }, "updateSale");
 }
 

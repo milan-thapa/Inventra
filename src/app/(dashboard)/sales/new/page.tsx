@@ -1,365 +1,657 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Plus, Trash2, User, Calendar, DollarSign, Package, Receipt, Percent } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ScanLine, ChevronDown, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useProfileStore } from "@/stores/profile-store";
-import { createSale } from "@/lib/actions/sales";
+import { createSale, getNextInvoiceNo } from "@/lib/actions/sales";
 import { getItems } from "@/lib/actions/inventory";
 import { getParties } from "@/lib/actions/party";
 import { toast } from "sonner";
+import { BarcodeScanner } from "@/components/sales/barcode-scanner";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function AddSalePage() {
+interface LineItem {
+  id: string;
+  itemId: string;
+  name: string;
+  quantity: number;
+  rate: number;
+  discountPct: number;
+  amount: number;
+}
+
+export default function CreateSalesInvoicePage() {
   const router = useRouter();
-  const { activeProfileId } = useProfileStore();
-  
+  const { activeProfileId, getActiveProfile } = useProfileStore();
+  const activeProfile = getActiveProfile();
+
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<any[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [parties, setParties] = useState<any[]>([]);
-  
-  // Form State
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+
   const [partyId, setPartyId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK">("CASH");
-  const [status, setStatus] = useState("PAID");
+  const [invoiceNo, setInvoiceNo] = useState("");
+  const [invoiceMode, setInvoiceMode] = useState<"manual" | "auto">("manual");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK">("CASH");
   const [remarks, setRemarks] = useState("");
-  
-  const [lineItems, setLineItems] = useState([
-    { id: Date.now().toString(), itemId: "", name: "", quantity: 1, rate: 0, amount: 0 }
+
+  // Extra charges
+  const [discount, setDiscount] = useState<number>(0);
+  const [discountType, setDiscountType] = useState<"pct" | "flat">("pct");
+  const [taxLabel, setTaxLabel] = useState("VAT 13%");
+  const [taxPct, setTaxPct] = useState(13);
+  const [extraCharges, setExtraCharges] = useState<{ label: string; amount: number }[]>([]);
+
+  const [lineItems, setLineItems] = useState<LineItem[]>([
+    { id: "1", itemId: "", name: "", quantity: 0, rate: 0, discountPct: 0, amount: 0 },
   ]);
-  
-  const [discount, setDiscount] = useState(0);
-  const [tax, setTax] = useState(0);
 
   useEffect(() => {
     if (activeProfileId) {
-      getItems(activeProfileId).then(res => res.data && setItems(res.data));
-      getParties(activeProfileId, "ALL").then(res => res.data && setParties(res.data));
+      setInitialLoading(true);
+      Promise.all([
+        getItems(activeProfileId),
+        getParties(activeProfileId, "ALL"),
+        invoiceMode === "auto" ? getNextInvoiceNo(activeProfileId) : Promise.resolve(null),
+      ]).then(([itemsRes, partiesRes, invoiceRes]) => {
+        if (itemsRes.data) setInventoryItems(itemsRes.data);
+        if (partiesRes.data) setParties(partiesRes.data);
+        if (invoiceRes?.data) setInvoiceNo(invoiceRes.data.toString());
+        setInitialLoading(false);
+      });
     }
-  }, [activeProfileId]);
+  }, [activeProfileId, invoiceMode]);
 
-  const updateLineItem = (index: number, field: string, value: any) => {
-    const newItems = [...lineItems];
-    const item = newItems[index];
-    
-    if (field === "itemId") {
-      const selectedItem = items.find(i => i.id === value);
-      item.itemId = value;
-      if (selectedItem) {
-        item.name = selectedItem.name;
-        item.rate = Number(selectedItem.sellingPrice);
-        item.amount = item.quantity * item.rate;
+  const calcAmount = useCallback((qty: number, rate: number, discPct: number) => {
+    const base = qty * rate;
+    return base - base * (discPct / 100);
+  }, []);
+
+  const updateLineItem = useCallback((index: number, field: keyof LineItem, value: any) => {
+    setLineItems((prev) => {
+      const updated = [...prev];
+      const item = { ...updated[index], [field]: value };
+
+      if (field === "itemId") {
+        const sel = inventoryItems.find((i) => i.id === value);
+        if (sel) {
+          item.name = sel.name;
+          item.rate = Number(sel.sellingPrice);
+        }
       }
-    } else {
-      (item as any)[field] = value;
-      if (field === "quantity" || field === "rate") {
-        item.amount = Number(item.quantity) * Number(item.rate);
+
+      item.amount = calcAmount(
+        field === "quantity" ? Number(value) : item.quantity,
+        field === "rate" ? Number(value) : item.rate,
+        field === "discountPct" ? Number(value) : item.discountPct
+      );
+
+      updated[index] = item;
+      return updated;
+    });
+  }, [inventoryItems, calcAmount]);
+
+  const addLineItem = useCallback(() => {
+    setLineItems((prev) => [
+      ...prev,
+      { id: Date.now().toString(), itemId: "", name: "", quantity: 0, rate: 0, discountPct: 0, amount: 0 },
+    ]);
+  }, []);
+
+  const removeLineItem = useCallback((index: number) => {
+    setLineItems((prev) => {
+      if (prev.length > 1) {
+        return prev.filter((_, i) => i !== index);
       }
-    }
-    
-    setLineItems(newItems);
-  };
+      return prev;
+    });
+  }, []);
 
-  const addLineItem = () => {
-    setLineItems([...lineItems, { id: Date.now().toString(), itemId: "", name: "", quantity: 1, rate: 0, amount: 0 }]);
-  };
+  const handleBarcodeScan = useCallback((scannedItem: any) => {
+    setLineItems((prev) => {
+      const existing = prev.findIndex((i) => i.itemId === scannedItem.id);
+      if (existing >= 0) {
+        const newQty = prev[existing].quantity + 1;
+        const updated = [...prev];
+        updated[existing] = {
+          ...updated[existing],
+          quantity: newQty,
+          amount: calcAmount(newQty, updated[existing].rate, updated[existing].discountPct)
+        };
+        toast.success(`Increased quantity of ${scannedItem.name} to ${newQty}`);
+        return updated;
+      } else {
+        toast.success(`Added ${scannedItem.name}`);
+        return [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            itemId: scannedItem.id,
+            name: scannedItem.name,
+            quantity: 1,
+            rate: Number(scannedItem.sellingPrice),
+            discountPct: 0,
+            amount: Number(scannedItem.sellingPrice),
+          },
+        ];
+      }
+    });
+  }, [calcAmount]);
 
-  const removeLineItem = (index: number) => {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter((_, i) => i !== index));
-    }
-  };
+  const subtotal = useMemo(() => 
+    lineItems.reduce((sum, item) => sum + item.amount, 0), 
+    [lineItems]
+  );
+  
+  const discountAmt = useMemo(() => 
+    discountType === "pct" ? subtotal * (discount / 100) : discount, 
+    [discountType, discount, subtotal]
+  );
+  
+  const taxBase = useMemo(() => subtotal - discountAmt, [subtotal, discountAmt]);
+  
+  const taxAmount = useMemo(() => taxBase * (taxPct / 100), [taxBase, taxPct]);
+  
+  const extraTotal = useMemo(() => 
+    extraCharges.reduce((sum, c) => sum + c.amount, 0), 
+    [extraCharges]
+  );
+  
+  const grandTotal = useMemo(() => taxBase + taxAmount + extraTotal, [taxBase, taxAmount, extraTotal]);
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-  const taxAmount = (subtotal - discount) * (tax / 100);
-  const grandTotal = subtotal - discount + taxAmount;
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!activeProfileId) {
-      toast.error("No active profile found. Please select or create a profile first.");
-      return;
-    }
-    
-    // Validation
-    const validItems = lineItems.filter(i => i.name && i.quantity > 0 && i.rate >= 0);
-    if (validItems.length === 0) {
-      toast.error("Please add at least one valid item");
-      return;
-    }
+  async function handleSubmit(saveAndNew = false) {
+    if (!activeProfileId) return toast.error("No active profile");
+    const validItems = lineItems.filter((i) => i.name && i.quantity > 0 && i.rate >= 0);
+    if (!validItems.length) return toast.error("Add at least one item");
 
     setLoading(true);
-    const data = {
+    const res = await createSale(activeProfileId, {
       partyId: partyId && partyId !== "none" ? partyId : undefined,
+      invoiceNo: invoiceNo ? parseInt(invoiceNo) : undefined,
       items: validItems,
       totalAmount: subtotal,
-      discount,
+      discount: discountAmt,
       tax: taxAmount,
       grandTotal,
       paymentMethod,
-      status,
+      status: "PAID",
       remarks,
       date: new Date(date),
-    };
-
-    const res = await createSale(activeProfileId, data);
+    });
     setLoading(false);
 
-    if (res.error) {
-      toast.error(res.error);
+    if (res.error) return toast.error(res.error);
+    toast.success("Sale invoice created successfully");
+    if (saveAndNew) {
+      setLineItems([{ id: "1", itemId: "", name: "", quantity: 0, rate: 0, discountPct: 0, amount: 0 }]);
+      setPartyId("");
+      setRemarks("");
+      setDiscount(0);
+      setExtraCharges([]);
+      setInvoiceNo("");
+      if (invoiceMode === "auto" && activeProfileId) {
+        getNextInvoiceNo(activeProfileId).then((res) => {
+          if (res.data) setInvoiceNo(res.data.toString());
+        });
+      }
     } else {
-      toast.success("Sale invoice created successfully");
-      router.refresh(); // Refresh the page data
       router.push("/sales");
     }
   }
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="h-10 w-10" asChild>
-          <Link href="/sales">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Create Sales Invoice</h1>
-          <p className="text-muted-foreground mt-1">Fill in the details to create a new sales invoice</p>
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-7 w-7" />
+          <Skeleton className="h-5 w-40" />
+        </div>
+        <div className="flex gap-4">
+          <Skeleton className="h-10 w-40" />
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+        <div className="flex gap-4">
+          <Skeleton className="h-32 flex-1" />
+          <Skeleton className="h-32 flex-1" />
         </div>
       </div>
+    );
+  }
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Invoice Details */}
-        <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
-            <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-emerald-600" />
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">Invoice Details</h2>
+  return (
+    <div className="min-h-screen bg-background">
+      <style jsx global>{`
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" asChild>
+            <Link href="/sales">
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+          </Button>
+          <span className="text-sm font-semibold text-foreground">Create Sales Invoice</span>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+          <Settings className="w-4 h-4" />
+        </Button>
+      </div>
+
+      <div className="px-5 py-5 space-y-5">
+        {/* ── Top row: Party | Invoice No | Date ── */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+          {/* Party — takes remaining width */}
+          <div className="flex-1 w-full space-y-1 sm:max-w-xs">
+            <Label className="text-[11px] font-medium text-muted-foreground">Select Party</Label>
+            <Select value={partyId} onValueChange={setPartyId}>
+              <SelectTrigger className="h-[34px] text-sm border-border bg-background text-muted-foreground">
+                <SelectValue placeholder="Search for party" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Cash Sale</SelectItem>
+                {parties.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="party" className="text-base font-medium">Customer / Party</Label>
-              <Select value={partyId} onValueChange={setPartyId}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select a party or leave empty for cash sale" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Cash Sale</SelectItem>
-                  {parties.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+          {/* Invoice No */}
+          <div className="space-y-1 w-full sm:w-[120px]">
+            <div className="flex items-center justify-between">
+              <Label className="text-[11px] font-medium text-muted-foreground">Invoice No</Label>
+              <button
+                type="button"
+                className="text-[11px] text-emerald-600 leading-none"
+                onClick={() => setInvoiceMode(m => m === "manual" ? "auto" : "manual")}
+              >
+                {invoiceMode === "manual" ? "Manual" : "Auto"}
+              </button>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="date" className="text-base font-medium">Invoice Date</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required className="pl-10 h-11" />
+            <Input
+              value={invoiceNo}
+              onChange={(e) => setInvoiceNo(e.target.value)}
+              className="h-[34px] text-sm border-border"
+              readOnly={invoiceMode === "auto"}
+              placeholder={invoiceMode === "auto" ? "Auto" : ""}
+            />
+          </div>
+
+          {/* Date */}
+          <div className="space-y-1 w-full sm:w-[160px]">
+            <Label className="text-[11px] font-medium text-muted-foreground">Invoice Date</Label>
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="h-[34px] text-sm border-border"
+            />
+          </div>
+        </div>
+
+        {/* ── Items Table ── */}
+        <div className="border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed border-collapse text-sm min-w-[700px]">
+              <colgroup>
+                <col style={{ width: "50px" }} />
+                <col />
+                <col style={{ width: "140px" }} />
+                <col style={{ width: "150px" }} />
+                <col style={{ width: "160px" }} />
+                <col style={{ width: "130px" }} />
+                <col style={{ width: "50px" }} />
+              </colgroup>
+              <thead>
+                <tr className="bg-muted border-b border-border">
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-3">S.N.</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-3">Name</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-3">Quantity</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-3">Rate</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground py-3 px-3">Discount</th>
+                  <th className="text-right text-xs font-semibold text-muted-foreground py-3 px-3">Amount</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map((item, index) => {
+                  const discAmt = item.quantity * item.rate * (item.discountPct / 100);
+                  return (
+                    <tr key={item.id} className="border-b border-border/50 last:border-0 hover:bg-muted/50 transition-colors">
+                      <td className="px-3 py-3 text-xs text-muted-foreground font-medium">{index + 1}</td>
+
+                      {/* Name */}
+                      <td className="px-3 py-3">
+                        {inventoryItems.length > 0 ? (
+                          <Select value={item.itemId} onValueChange={(v) => updateLineItem(index, "itemId", v)}>
+                            <SelectTrigger className="h-9 text-sm border-border bg-card shadow-sm">
+                              <SelectValue placeholder="Enter Item name" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inventoryItems.map((i) => (
+                                <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            placeholder="Enter Item name"
+                            value={item.name}
+                            onChange={(e) => updateLineItem(index, "name", e.target.value)}
+                            className="h-9 text-sm border-border bg-card shadow-sm"
+                          />
+                        )}
+                      </td>
+
+                      {/* Qty */}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number" min="1" step="1"
+                            value={item.quantity > 0 ? item.quantity : ""}
+                            onChange={(e) => updateLineItem(index, "quantity", Number(e.target.value))}
+                            placeholder="0"
+                            className="h-9 text-sm text-right w-20 border-border bg-card shadow-sm placeholder:text-muted-foreground"
+                          />
+                          <span className="text-xs text-muted-foreground font-medium">PCS</span>
+                        </div>
+                      </td>
+
+                      {/* Rate */}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground font-medium">Rs.</span>
+                          <Input
+                            type="number" min="0" step="0.01"
+                            value={item.rate > 0 ? item.rate : ""}
+                            onChange={(e) => updateLineItem(index, "rate", Number(e.target.value))}
+                            placeholder="0"
+                            className="h-9 text-sm text-right flex-1 border-border bg-card shadow-sm placeholder:text-muted-foreground"
+                          />
+                        </div>
+                      </td>
+
+                      {/* Discount */}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number" min="0" max="100" step="0.1"
+                            value={item.discountPct > 0 ? item.discountPct : ""}
+                            onChange={(e) => updateLineItem(index, "discountPct", Number(e.target.value))}
+                            placeholder="0"
+                            className="h-9 text-sm text-right w-14 border-border bg-card shadow-sm placeholder:text-muted-foreground"
+                          />
+                          <span className="text-xs text-muted-foreground font-medium">%</span>
+                          <span className="text-xs text-muted-foreground font-medium">Rs.</span>
+                          <span className="text-xs text-muted-foreground min-w-[40px] text-right font-medium">
+                            {discAmt > 0 ? discAmt.toFixed(2) : ""}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Amount */}
+                      <td className="px-3 py-3 text-right text-sm font-semibold text-foreground">
+                        Rs. {item.amount > 0 ? item.amount.toFixed(2) : ""}
+                      </td>
+
+                      {/* Delete */}
+                      <td className="px-2 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeLineItem(index)}
+                          className="w-8 h-8 bg-red-500/10 hover:bg-red-500/20 rounded-lg flex items-center justify-center transition-colors"
+                          aria-label="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Add Item row + Subtotal */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 py-3 bg-muted border-t border-border">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={addLineItem}
+                className="flex items-center gap-1.5 text-sm text-emerald-600 font-semibold hover:text-emerald-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Add Billing Item
+              </button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 text-sm border-border gap-1.5 font-medium"
+                onClick={() => setShowBarcodeScanner(true)}
+              >
+                <ScanLine className="w-4 h-4" /> Scan Barcode
+              </Button>
+            </div>
+            <div className="flex items-center gap-6 text-sm w-full sm:w-auto">
+              <span className="text-muted-foreground font-medium">Sub Total</span>
+              <span className="font-semibold text-foreground min-w-[80px] text-right">
+                Rs. {subtotal > 0 ? subtotal.toFixed(2) : "0.00"}
+              </span>
+              <div className="w-9" />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Bottom: Notes left | Totals right ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left */}
+          <div>
+            <Label className="text-[11px] font-medium text-muted-foreground block mb-1">Notes or Remarks</Label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Enter note or description..."
+              rows={3}
+              className="w-full border border-border rounded-md px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          {/* Right: totals */}
+          <div className="space-y-0">
+            {/* Discount */}
+            <div className="flex items-center justify-between py-3 border-b border-border/50">
+              <span className="text-sm font-medium text-foreground">Discount</span>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  value={discount > 0 ? discount : ""}
+                  onChange={(e) => setDiscount(Number(e.target.value))}
+                  placeholder="0"
+                  className="w-20 h-8 text-sm text-right border-border placeholder:text-muted-foreground"
+                />
+                <select
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value as "pct" | "flat")}
+                  className="h-8 text-sm border border-border rounded px-2"
+                >
+                  <option value="pct">%</option>
+                  <option value="flat">Rs</option>
+                </select>
+                <span className="text-xs text-muted-foreground w-20 text-right">
+                  Rs. {discountAmt > 0 ? discountAmt.toFixed(2) : "0.00"}
+                </span>
+                {discount > 0 && (
+                  <button type="button" className="w-6 h-6 bg-red-500/10 hover:bg-red-500/20 rounded flex items-center justify-center transition-colors" onClick={() => setDiscount(0)}>
+                    <X className="w-3 h-3 text-red-500" />
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status" className="text-base font-medium">Payment Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PAID">Paid</SelectItem>
-                  <SelectItem value="UNPAID">Unpaid</SelectItem>
-                  <SelectItem value="PARTIAL">Partial</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Tax */}
+            <div className="flex items-center justify-between py-3 border-b border-border/50">
+              <span className="text-sm font-medium text-foreground">Tax</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={taxLabel}
+                  onChange={(e) => {
+                    setTaxLabel(e.target.value);
+                    setTaxPct(e.target.value.includes("13") ? 13 : e.target.value.includes("10") ? 10 : 0);
+                  }}
+                  className="h-8 text-sm border border-border rounded px-2"
+                >
+                  <option value="VAT 13%">VAT 13%</option>
+                  <option value="VAT 10%">VAT 10%</option>
+                  <option value="No Tax">No Tax</option>
+                </select>
+                <span className="text-xs text-muted-foreground w-20 text-right">
+                  Rs. {taxAmount > 0 ? taxAmount.toFixed(2) : "0.00"}
+                </span>
+                {taxPct > 0 && (
+                  <button type="button" className="w-6 h-6 bg-red-500/10 hover:bg-red-500/20 rounded flex items-center justify-center transition-colors" onClick={() => { setTaxLabel("No Tax"); setTaxPct(0); }}>
+                    <X className="w-3 h-3 text-red-500" />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Items */}
-        <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
-            <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 text-blue-600" />
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">Items</h2>
-          </div>
-          
-          <div className="hidden md:grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground px-2 mb-4">
-            <div className="col-span-4">ITEM</div>
-            <div className="col-span-2 text-right">QTY</div>
-            <div className="col-span-2 text-right">RATE</div>
-            <div className="col-span-3 text-right">AMOUNT</div>
-            <div className="col-span-1"></div>
-          </div>
-
-          <div className="space-y-3">
-            {lineItems.map((item, index) => (
-              <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-background p-4 md:p-3 rounded-lg border border-border/50">
-                <div className="md:col-span-4 space-y-1">
-                  <Label className="md:hidden text-xs text-muted-foreground">Item</Label>
-                  {items.length > 0 ? (
-                     <Select value={item.itemId} onValueChange={val => updateLineItem(index, "itemId", val)}>
-                       <SelectTrigger className="h-11">
-                         <SelectValue placeholder="Select item..." />
-                       </SelectTrigger>
-                       <SelectContent>
-                         {items.map(i => (
-                           <SelectItem key={i.id} value={i.id}>{i.name} (Stock: {i.stockQuantity})</SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                  ) : (
-                    <Input 
-                      placeholder="Item name" 
-                      value={item.name} 
-                      onChange={e => updateLineItem(index, "name", e.target.value)} 
-                      required 
-                      className="h-11"
-                    />
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 md:contents">
-                    <div className="md:col-span-2 space-y-1 text-right">
-                    <Label className="md:hidden text-xs text-muted-foreground text-left">Quantity</Label>
-                    <Input 
-                        type="number" min="1" required
-                        className="text-right h-11"
-                        value={item.quantity || ""} 
-                        onChange={e => updateLineItem(index, "quantity", Number(e.target.value))} 
-                    />
-                    </div>
-                    
-                    <div className="md:col-span-2 space-y-1 text-right">
-                    <Label className="md:hidden text-xs text-muted-foreground text-left">Rate</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        type="number" min="0" step="0.01" required
-                        className="text-right pl-10 h-11"
-                        value={item.rate || ""} 
-                        onChange={e => updateLineItem(index, "rate", Number(e.target.value))} 
-                      />
-                    </div>
-                    </div>
-                </div>
-                
-                <div className="md:col-span-3 space-y-1 text-right">
-                  <Label className="md:hidden text-xs text-muted-foreground text-left">Amount</Label>
-                  <div className="h-11 px-4 flex items-center justify-end bg-muted/30 rounded-lg font-semibold text-base">
-                    {item.amount.toFixed(2)}
-                  </div>
-                </div>
-                
-                <div className="md:col-span-1 flex justify-end">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeLineItem(index)} className="text-muted-foreground hover:text-destructive h-9 w-9">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+            {/* Extra charges */}
+            {extraCharges.map((charge, i) => (
+              <div key={i} className="flex items-center justify-between py-3 border-b border-border/50">
+                <Input
+                  value={charge.label}
+                  onChange={(e) => {
+                    const n = [...extraCharges];
+                    n[i].label = e.target.value;
+                    setExtraCharges(n);
+                  }}
+                  className="h-8 text-sm border-border flex-1 mr-2 placeholder:text-muted-foreground"
+                  placeholder="Charge name"
+                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={charge.amount > 0 ? charge.amount : ""}
+                    onChange={(e) => {
+                      const n = [...extraCharges];
+                      n[i].amount = Number(e.target.value);
+                      setExtraCharges(n);
+                    }}
+                    placeholder="0"
+                    className="w-20 h-8 text-sm text-right border-border placeholder:text-muted-foreground"
+                  />
+                  <button
+                    type="button"
+                    className="w-6 h-6 bg-red-500/10 hover:bg-red-500/20 rounded flex items-center justify-center transition-colors"
+                    onClick={() => setExtraCharges(extraCharges.filter((_, j) => j !== i))}
+                  >
+                    <X className="w-3 h-3 text-red-500" />
+                  </button>
                 </div>
               </div>
             ))}
-          </div>
-          
-          <Button type="button" variant="outline" onClick={addLineItem} className="mt-4 text-emerald-600 border-emerald-600 hover:bg-emerald-50 h-11">
-            <Plus className="w-4 h-4 mr-2" /> Add Item
-          </Button>
-        </div>
 
-        {/* Summary & Payment */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-purple-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-foreground">Payment & Notes</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="paymentMethod" className="text-base font-medium">Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Payment Method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="BANK">Bank Transfer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="remarks" className="text-base font-medium">Remarks / Notes</Label>
-                <Input id="remarks" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Any additional notes..." className="h-11" />
-              </div>
-            </div>
-          </div>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-emerald-600 font-medium py-2 hover:text-emerald-700 transition-colors"
+              onClick={() => setExtraCharges([...extraCharges, { label: "", amount: 0 }])}
+            >
+              <Plus className="w-3 h-3" /> Add More Charges
+            </button>
 
-          <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/50">
-              <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                <Percent className="w-5 h-5 text-amber-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-foreground">Invoice Summary</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-semibold text-lg">{subtotal.toFixed(2)}</span>
-              </div>
-              
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Discount</span>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    type="number" className="w-32 text-right pl-10 h-10" min="0" step="0.01"
-                    value={discount || ""} onChange={e => setDiscount(Number(e.target.value))} 
-                  />
+            {/* Total Amount */}
+            <div className="flex items-center justify-between py-4 border-t-2 border-border mt-2">
+              <span className="text-sm font-semibold text-foreground">Total Amount</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Rs.</span>
+                <div className="w-[140px] h-10 border-2 border-emerald-500 rounded-lg bg-emerald-50 flex items-center justify-end px-4 text-lg font-bold text-emerald-700">
+                  {grandTotal > 0 ? grandTotal.toFixed(2) : "0.00"}
                 </div>
               </div>
-              
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Tax (%)</span>
-                <div className="relative">
-                  <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    type="number" className="w-32 text-right pl-10 h-10" min="0" max="100" step="0.1"
-                    value={tax || ""} onChange={e => setTax(Number(e.target.value))} 
-                  />
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                <span className="text-xl font-bold text-foreground">Grand Total</span>
-                <span className="text-3xl font-bold text-emerald-600">{grandTotal.toFixed(2)}</span>
-              </div>
+            </div>
+
+            {/* Payment Mode */}
+            <div className="flex items-center justify-between py-3">
+              <span className="text-sm font-medium text-foreground">Payment Mode</span>
+              <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+                <SelectTrigger className="w-[140px] h-9 text-sm border-border bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">Cash</SelectItem>
+                  <SelectItem value="BANK">Bank Transfer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-3 sticky bottom-4 bg-background/80 backdrop-blur-md p-4 rounded-xl border border-border/50 shadow-sm z-10">
-          <Button variant="outline" type="button" className="h-11 px-8" asChild>
-            <Link href="/sales">Cancel</Link>
+      {/* ── Footer ── */}
+      <div className="flex items-center justify-end gap-2.5 px-5 py-3 border-t border-border">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-[34px] px-4 text-sm border-border text-foreground"
+          onClick={() => handleSubmit(true)}
+          disabled={loading}
+        >
+          Save &amp; New
+        </Button>
+        <div className="flex">
+          <Button
+            type="button"
+            disabled={loading}
+            className="h-[34px] px-4 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-r-none"
+            onClick={() => handleSubmit(false)}
+          >
+            {loading ? "Saving..." : "Save Sales Invoice"}
           </Button>
-          <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 h-11 px-8 font-semibold shadow-lg shadow-emerald-500/20">
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? "Saving..." : "Save Invoice"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                className="h-[34px] px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-l-none border-l border-emerald-500"
+                aria-label="More options"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleSubmit(true)}>Save & New</DropdownMenuItem>
+              <DropdownMenuItem>Share</DropdownMenuItem>
+              <DropdownMenuItem>Print</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </form>
+      </div>
+
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScanSuccess={handleBarcodeScan}
+      />
     </div>
   );
 }

@@ -85,3 +85,23 @@ export async function rateLimitByIp(
   const key = `ip:${ip}:${action}`;
   return rateLimit(key, limit, windowMs);
 }
+
+/**
+ * Rate limit wrapper for server actions
+ * Applies rate limiting before executing the action
+ */
+export async function withRateLimit<T>(
+  userId: string,
+  action: string,
+  fn: () => Promise<T>,
+  limit: number = 10,
+  windowMs: number = 60 * 1000
+): Promise<T> {
+  const result = await rateLimitByUser(userId, action, limit, windowMs);
+  
+  if (!result.success) {
+    throw new Error(`Rate limit exceeded. Please try again later.`);
+  }
+  
+  return fn();
+}

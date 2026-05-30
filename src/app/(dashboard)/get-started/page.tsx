@@ -106,9 +106,9 @@ export default function GetStartedPage() {
               onClick={() => goToStep(index)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 index === currentStep
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-gray-600 text-white"
                   : completed.includes(index)
-                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                  ? "bg-muted text-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
@@ -145,7 +145,7 @@ export default function GetStartedPage() {
             {/* Content Section */}
             <div className="p-8 flex flex-col justify-center">
               <div className="mb-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-sm font-medium mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted text-foreground text-sm font-medium mb-4">
                   <span>Step {currentStep + 1} of {STEPS.length}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-3">{step.title}</h2>

@@ -70,11 +70,11 @@ export function TransactionReportView({
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-black mb-1">Inventra Report</h1>
-            <p className="text-gray-500 text-sm">Transaction Statement</p>
+            <p className="text-muted-foreground text-sm">Transaction Statement</p>
           </div>
           <div className="text-right">
             <p className="text-sm font-bold">Generated on</p>
-            <p className="text-sm text-gray-500">{formatDate(new Date(), "PPpp")}</p>
+            <p className="text-sm text-muted-foreground">{formatDate(new Date(), "PPpp")}</p>
           </div>
         </div>
       </div>

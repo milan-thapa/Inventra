@@ -170,7 +170,7 @@ export function RemindersView({
             className={cn(
               "px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
               tab === t.value
-                ? "border-emerald-500 text-emerald-500"
+                ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             )}>
             {t.label}

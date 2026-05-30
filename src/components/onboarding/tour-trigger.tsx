@@ -1,15 +1,32 @@
 // src/components/onboarding/tour-trigger.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { InteractiveTour, DASHBOARD_TOUR_STEPS } from "./interactive-tour";
+import { InteractiveTour, DASHBOARD_TOUR_STEPS, TourStep } from "./interactive-tour";
 
-export function TourTrigger() {
+interface TourTriggerProps {
+  tourKey?: string;
+  steps?: TourStep[];
+  title?: string;
+}
+
+export function TourTrigger({ 
+  tourKey = "inventra-tour-completed", 
+  steps = DASHBOARD_TOUR_STEPS,
+  title = "New to Inventra? Take a quick tour to get started!"
+}: TourTriggerProps) {
   const [showTour, setShowTour] = useState(false);
-  const [showBanner, setShowBanner] = useState(true);
+  const [showBanner, setShowBanner] = useState(false); // Default false to prevent hydration mismatch
+
+  useEffect(() => {
+    const isCompleted = localStorage.getItem(tourKey);
+    if (!isCompleted) {
+      setShowBanner(true);
+    }
+  }, [tourKey]);
 
   const handleStartTour = () => {
     setShowBanner(false);
@@ -18,6 +35,7 @@ export function TourTrigger() {
 
   const handleCloseBanner = () => {
     setShowBanner(false);
+    localStorage.setItem(tourKey, "true"); // Also mark as completed if dismissed
   };
 
   return (
@@ -33,7 +51,7 @@ export function TourTrigger() {
           >
             <div className="flex items-center gap-2 flex-1">
               <Sparkles className="w-5 h-5" />
-              <span className="font-medium">New to Inventra? Take a quick tour to get started!</span>
+              <span className="font-medium">{title}</span>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -59,13 +77,13 @@ export function TourTrigger() {
 
       {/* Interactive Tour */}
       <InteractiveTour
-        steps={DASHBOARD_TOUR_STEPS}
+        steps={steps}
         isOpen={showTour}
         onClose={() => setShowTour(false)}
         onComplete={() => {
           setShowTour(false);
           // Mark tour as completed in localStorage
-          localStorage.setItem("inventra-tour-completed", "true");
+          localStorage.setItem(tourKey, "true");
         }}
       />
     </>

@@ -45,6 +45,7 @@ export const updateSettingsSchema = z.object({
   privacyMode: z.boolean().optional(),
   appLock: z.boolean().optional(),
   numberFormat: z.enum(["indian", "international"]).optional(),
+  barcodeEnabled: z.boolean().optional(),
 });
 
 export type CreateProfileInput = z.infer<typeof createProfileSchema>;

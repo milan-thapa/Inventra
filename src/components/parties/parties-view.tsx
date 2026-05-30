@@ -11,6 +11,8 @@ import { AddPartyModal } from "@/components/parties/add-party-modal";
 import { AddPaymentInModal } from "@/components/parties/add-payment-in-modal";
 import { AddPaymentOutModal } from "@/components/parties/add-payment-out-modal";
 import { EmptyState } from "@/components/shared/empty-state";
+import { TourTrigger } from "@/components/onboarding/tour-trigger";
+import { PARTIES_TOUR_STEPS } from "@/components/onboarding/interactive-tour";
 
 type BalanceFilter = "ALL" | "TO_RECEIVE" | "TO_GIVE" | "SETTLED";
 
@@ -94,9 +96,15 @@ export function PartiesView({
   };
 
   return (
-    <div className="flex h-[calc(100vh-120px)] gap-4">
-      {/* ── LEFT: Parties List ─────────────────────────────── */}
-      <div className="w-72 flex-shrink-0 flex flex-col bg-card rounded-xl border border-border/50 overflow-hidden">
+    <>
+      <TourTrigger 
+        tourKey="inventra-parties-tour-completed" 
+        steps={PARTIES_TOUR_STEPS} 
+        title="Learn how to manage your Parties (Customers & Suppliers)!" 
+      />
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] gap-4">
+        {/* ── LEFT: Parties List ─────────────────────────────── */}
+        <div className="w-full lg:w-72 flex-shrink-0 flex flex-col bg-card rounded-xl border border-border/50 overflow-hidden lg:h-full h-auto max-h-[50vh] lg:max-h-none">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <h2 className="font-semibold text-sm text-foreground">
@@ -107,6 +115,7 @@ export function PartiesView({
             onClick={() => setAddPartyOpen(true)}
             variant="income"
             className="h-7 px-2 text-xs gap-1"
+            data-tour="add-party"
           >
             <Plus className="w-3 h-3" /> Add Party
           </Button>
@@ -126,7 +135,7 @@ export function PartiesView({
         </div>
 
         {/* Filter */}
-        <div className="px-3 py-2 border-b border-border/50">
+        <div className="px-3 py-2 border-b border-border/50" data-tour="party-filters">
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as BalanceFilter)}
@@ -139,7 +148,7 @@ export function PartiesView({
         </div>
 
         {/* Party list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" data-tour="party-list">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
               <Users className="w-10 h-10 text-muted-foreground/50 mb-2" />
@@ -227,5 +236,6 @@ export function PartiesView({
         </>
       )}
     </div>
+    </>
   );
 }

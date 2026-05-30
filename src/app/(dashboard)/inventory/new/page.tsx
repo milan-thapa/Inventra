@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Common units ─────────────────────────────────────────────────────────────
 const UNITS = [
@@ -60,9 +61,9 @@ function MeasuringUnitModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm p-0 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <DialogTitle className="text-sm font-bold text-gray-900 dark:text-white">
+      <DialogContent className="max-w-sm p-0 rounded-xl border border-border overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/50">
+          <DialogTitle className="text-sm font-bold text-foreground">
             Select Measuring Unit
           </DialogTitle>
         </div>
@@ -70,13 +71,13 @@ function MeasuringUnitModal({
         <div className="px-5 py-4 space-y-4">
           {/* Primary */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <Label className="text-xs font-semibold text-muted-foreground">
               Primary Unit
             </Label>
             <select
               value={primary}
               onChange={(e) => setPrimary(e.target.value)}
-              className="w-full h-10 px-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full h-10 px-3 text-sm border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">e.g. Kilogram</option>
               {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
@@ -85,13 +86,13 @@ function MeasuringUnitModal({
 
           {/* Secondary */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <Label className="text-xs font-semibold text-muted-foreground">
               Secondary Unit
             </Label>
             <select
               value={secondary}
               onChange={(e) => setSecondary(e.target.value)}
-              className="w-full h-10 px-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full h-10 px-3 text-sm border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">e.g. Gram</option>
               {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
@@ -100,7 +101,7 @@ function MeasuringUnitModal({
 
           {/* Conversion Rate */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <Label className="text-xs font-semibold text-muted-foreground">
               Conversion Rate
             </Label>
             <Input
@@ -114,7 +115,7 @@ function MeasuringUnitModal({
           </div>
         </div>
 
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2.5">
+        <div className="px-5 py-3 border-t border-border/50 flex justify-end gap-2.5">
           <Button variant="outline" onClick={onClose} className="h-9 text-xs">Cancel</Button>
           <Button
             onClick={handleSave}
@@ -134,6 +135,7 @@ export default function AddItemPage() {
   const { activeProfileId } = useProfileStore();
 
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"stock" | "others">("stock");
 
@@ -143,20 +145,23 @@ export default function AddItemPage() {
   const [itemType, setItemType] = useState<"PRODUCT" | "SERVICE">("PRODUCT");
   const [openingStock, setOpeningStock] = useState("");
   const [unit, setUnit] = useState("PCS");
-  const [salesPrice, setSalesPrice] = useState("");
+  const [sellingPrice, setSellingPrice] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [lowStockAlert, setLowStockAlert] = useState(true);
   const [lowStockQty, setLowStockQty] = useState("10");
   const [description, setDescription] = useState("");
   const [sku, setSku] = useState("");
+  const [barcode, setBarcode] = useState("");
 
   const [showUnitModal, setShowUnitModal] = useState(false);
 
   useEffect(() => {
     if (activeProfileId) {
-      getItemCategories(activeProfileId).then(
-        (r) => r.data && setCategories(r.data)
-      );
+      setInitialLoading(true);
+      getItemCategories(activeProfileId).then((r) => {
+        if (r.data) setCategories(r.data);
+        setInitialLoading(false);
+      });
     }
   }, [activeProfileId]);
 
@@ -169,8 +174,9 @@ export default function AddItemPage() {
     const res = await createItem(activeProfileId, {
       name: name.trim(),
       sku: sku || undefined,
+      barcode: barcode || undefined,
       purchasePrice: parseFloat(purchasePrice) || 0,
-      sellingPrice: parseFloat(salesPrice) || 0,
+      sellingPrice: parseFloat(sellingPrice) || 0,
       stockQuantity: parseInt(openingStock) || 0,
       unit,
       type: itemType,
@@ -186,8 +192,8 @@ export default function AddItemPage() {
       toast.success("Item added successfully");
       if (andNew) {
         // Reset form
-        setName(""); setSku(""); setOpeningStock("");
-        setSalesPrice(""); setPurchasePrice("");
+        setName(""); setSku(""); setBarcode(""); setOpeningStock("");
+        setSellingPrice(""); setPurchasePrice("");
         setCategoryId("none"); setItemType("PRODUCT");
       } else {
         router.push("/inventory");
@@ -195,18 +201,33 @@ export default function AddItemPage() {
     }
   };
 
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="bg-card border-b border-border px-6 py-4">
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="max-w-2xl mx-auto px-6 py-6 space-y-4">
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       {/* ── Header ── */}
-      <div className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
+      <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/inventory" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+          <Link href="/inventory" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Add New Item</h1>
+          <h1 className="text-base font-bold text-foreground">Add New Item</h1>
         </div>
-        <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-          <Settings className="w-4.5 h-4.5 text-gray-500" />
+        <button className="p-2 rounded-lg hover:bg-muted">
+          <Settings className="w-4.5 h-4.5 text-muted-foreground" />
         </button>
       </div>
 
@@ -214,12 +235,12 @@ export default function AddItemPage() {
       <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
         {/* Item Name */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+          <Label className="text-xs font-semibold text-muted-foreground">
             Item Name
           </Label>
           <Input
             placeholder="e.g. MacBook"
-            className="h-11 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+            className="h-11 text-sm bg-card border-border"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -228,11 +249,11 @@ export default function AddItemPage() {
         {/* Category + Item Type */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <Label className="text-xs font-semibold text-muted-foreground">
               Item Category
             </Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="h-11 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+              <SelectTrigger className="h-11 text-sm bg-card border-border">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -245,7 +266,7 @@ export default function AddItemPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <Label className="text-xs font-semibold text-muted-foreground">
               Item Type
             </Label>
             <div className="flex items-center gap-2 h-11">
@@ -257,8 +278,8 @@ export default function AddItemPage() {
                   className={cn(
                     "h-9 px-4 rounded-lg text-xs font-semibold border transition-all",
                     itemType === t
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                      : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-emerald-300"
+                      ? "bg-muted-foreground text-white border-muted-foreground shadow-sm"
+                      : "bg-card text-muted-foreground border-border hover:border-foreground"
                   )}
                 >
                   {t.charAt(0) + t.slice(1).toLowerCase()}
@@ -269,8 +290,8 @@ export default function AddItemPage() {
         </div>
 
         {/* Tabs: Stock Details / Others */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-          <div className="flex border-b border-gray-200 dark:border-gray-800">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex border-b border-border">
             {[
               { id: "stock", label: "Stock Details" },
               { id: "others", label: "Others" },
@@ -281,8 +302,8 @@ export default function AddItemPage() {
                 className={cn(
                   "flex-1 py-3 text-sm font-semibold border-b-2 transition-colors",
                   activeTab === tab.id
-                    ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                    ? "border-muted-foreground text-muted-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 {tab.label}
@@ -296,7 +317,7 @@ export default function AddItemPage() {
                 {/* Opening Stock + Measuring Unit */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    <Label className="text-xs font-semibold text-muted-foreground">
                       Opening Stock
                     </Label>
                     <div className="relative">
@@ -308,25 +329,25 @@ export default function AddItemPage() {
                         value={openingStock}
                         onChange={(e) => setOpeningStock(e.target.value)}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                         {unit.split(" ")[0]}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    <Label className="text-xs font-semibold text-muted-foreground">
                       Measuring Unit
                     </Label>
                     <button
                       type="button"
                       onClick={() => setShowUnitModal(true)}
-                      className="w-full h-10 flex items-center justify-between px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 hover:border-emerald-400 transition-colors group"
+                      className="w-full h-10 flex items-center justify-between px-3 border border-border rounded-lg bg-card hover:border-emerald-400 transition-colors group"
                     >
-                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                      <span className="text-sm text-foreground truncate">
                         {unit}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 flex-shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-emerald-500 flex-shrink-0" />
                     </button>
                   </div>
                 </div>
@@ -334,7 +355,7 @@ export default function AddItemPage() {
                 {/* Sales Price + Purchase Price */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    <Label className="text-xs font-semibold text-muted-foreground">
                       Sales Price
                     </Label>
                     <div className="relative">
@@ -344,17 +365,17 @@ export default function AddItemPage() {
                         min="0"
                         placeholder="0.00"
                         className="pr-16 h-10 text-sm"
-                        value={salesPrice}
-                        onChange={(e) => setSalesPrice(e.target.value)}
+                        value={sellingPrice}
+                        onChange={(e) => setSellingPrice(e.target.value)}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                         /{unit.split(" ")[0]}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    <Label className="text-xs font-semibold text-muted-foreground">
                       Purchase Price
                     </Label>
                     <div className="relative">
@@ -367,7 +388,7 @@ export default function AddItemPage() {
                         value={purchasePrice}
                         onChange={(e) => setPurchasePrice(e.target.value)}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                         /{unit.split(" ")[0]}
                       </span>
                     </div>
@@ -379,7 +400,7 @@ export default function AddItemPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-amber-500" />
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      <span className="text-sm font-semibold text-foreground">
                         Low Stock Alert
                       </span>
                     </div>
@@ -388,7 +409,7 @@ export default function AddItemPage() {
                       onClick={() => setLowStockAlert(!lowStockAlert)}
                       className={cn(
                         "relative w-11 h-6 rounded-full transition-colors",
-                        lowStockAlert ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                        lowStockAlert ? "bg-emerald-500" : "bg-muted-foreground"
                       )}
                     >
                       <span
@@ -402,7 +423,7 @@ export default function AddItemPage() {
 
                   {lowStockAlert && (
                     <div className="mt-3 space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      <Label className="text-xs font-semibold text-muted-foreground">
                         Low Stock Quantity
                       </Label>
                       <div className="relative">
@@ -410,11 +431,11 @@ export default function AddItemPage() {
                           type="number"
                           min="0"
                           placeholder="10"
-                          className="pr-14 h-10 text-sm bg-white dark:bg-gray-900"
+                          className="pr-14 h-10 text-sm bg-card"
                           value={lowStockQty}
                           onChange={(e) => setLowStockQty(e.target.value)}
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                           {unit.split(" ")[0]}
                         </span>
                       </div>
@@ -426,7 +447,7 @@ export default function AddItemPage() {
               <div className="space-y-4">
                 {/* SKU */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  <Label className="text-xs font-semibold text-muted-foreground">
                     SKU / Item Code
                   </Label>
                   <Input
@@ -437,15 +458,28 @@ export default function AddItemPage() {
                   />
                 </div>
 
+                {/* Barcode */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground">
+                    Barcode
+                  </Label>
+                  <Input
+                    placeholder="e.g. 1234567890"
+                    className="h-10 text-sm"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                  />
+                </div>
+
                 {/* Description */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  <Label className="text-xs font-semibold text-muted-foreground">
                     Description
                   </Label>
                   <textarea
                     placeholder="Enter item description..."
                     rows={3}
-                    className="w-full text-sm px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full text-sm px-3 py-2 border border-border rounded-lg bg-card text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />

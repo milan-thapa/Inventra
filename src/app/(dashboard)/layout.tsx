@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { PageTransition } from "@/components/layout/page-transition";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export default async function DashboardLayout({
   children,
@@ -14,9 +15,11 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  console.log("[DashboardLayout] Session:", session?.user?.id, session?.user?.email);
   if (!session?.user) redirect("/login");
 
   const profileExists = await hasProfiles();
+  console.log("[DashboardLayout] Profile exists:", profileExists);
   if (!profileExists) redirect("/onboarding");
 
   return (
@@ -27,10 +30,12 @@ export default async function DashboardLayout({
       {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <PageTransition>
-            {children}
-          </PageTransition>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+          <ErrorBoundary>
+            <PageTransition>
+              {children}
+            </PageTransition>
+          </ErrorBoundary>
         </main>
       </div>
       <CommandPalette />

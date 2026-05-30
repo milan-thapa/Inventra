@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, RotateCcw, FileText, Eye, Trash2, CheckCircle2, Clock, User, Calendar, ArrowRight, XCircle, Package, ArrowDownLeft } from "lucide-react";
+import { Plus, Search, RotateCcw, FileText, Trash2, CheckCircle2, Clock, User, Calendar, ArrowRight, XCircle, Package, ArrowDownLeft } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,7 +156,7 @@ export default function PurchaseReturnsPage() {
       {/* Purchase Return Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredReturns.map((returnItem) => (
-          <div key={returnItem.id} className="bg-card border border-border/50 rounded-xl p-5 hover:border-blue-500/30 hover:shadow-lg transition-all">
+          <div key={returnItem.id} className="bg-card border border-border/50 rounded-xl p-5 hover:border-blue-500/30 hover:shadow-lg transition-all cursor-pointer" onClick={() => setViewReturn(returnItem)}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 flex items-center justify-center border border-blue-500/20">
@@ -184,7 +184,7 @@ export default function PurchaseReturnsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => setDeleteId(returnItem.id)}
+                  onClick={(e) => { e.stopPropagation(); setDeleteId(returnItem.id); }}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -218,15 +218,12 @@ export default function PurchaseReturnsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setViewReturn(returnItem)}>
-                <Eye className="w-4 h-4 mr-2" /> View
-              </Button>
               {returnItem.status === "PENDING" && (
                 <Button 
                   variant="outline" 
                   size="sm" 
                   className="flex-1 text-emerald-600 border-emerald-600" 
-                  onClick={() => handleApproveReturn(returnItem.id)}
+                  onClick={(e) => { e.stopPropagation(); handleApproveReturn(returnItem.id); }}
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" /> Approve
                 </Button>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Calendar, DollarSign, Save, Plus } from "lucide-react";
+import { ArrowLeft, User, Calendar, Coins, Save, Plus } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,7 +160,7 @@ export default function NewPaymentInPage() {
           {/* Payment Details */}
           <div className="bg-card border border-border/50 rounded-xl p-6 space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
+              <Coins className="w-5 h-5 text-emerald-600" />
               <h3 className="font-semibold text-foreground">Payment Details</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -178,7 +178,7 @@ export default function NewPaymentInPage() {
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                     required
                   />
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 </div>
               </div>
               <div className="space-y-2">

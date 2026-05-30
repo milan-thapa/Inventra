@@ -99,9 +99,14 @@ model Profile {
   taxRate         Decimal     @default(0) @db.Decimal(5, 2) // Tax percentage
   taxNumber       String?     // GSTIN/VAT number
 
+  // Barcode Settings
+  barcodeEnabled  Boolean     @default(false)
+
   // Subscription
-  subscriptionPlan String   @default("trial")
-  subscriptionEnd  DateTime?
+  subscriptionPlan      String   @default("trial")
+  subscriptionEnd       DateTime?
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
 
   isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
@@ -176,6 +181,7 @@ model Party {
   batchSupplies     ItemBatch[]
 
   @@index([profileId])
+  @@index([profileId, deletedAt])
   @@index([profileId, balanceType])
   @@index([profileId, name])
   @@index([profileId, type])
@@ -210,6 +216,10 @@ model PartyTransaction {
 
   @@index([partyId])
   @@index([profileId])
+  @@index([profileId, type])
+  @@index([profileId, date])
+  @@index([partyId, date])
+  @@unique([profileId, receiptNumber])
 }
 
 enum PartyTxType {
@@ -249,6 +259,7 @@ model Expense {
   @@index([categoryId])
   @@index([profileId, date])
   @@index([profileId, paymentMethod])
+  @@unique([profileId, expenseNo])
 }
 
 model ExpenseItem {
@@ -298,6 +309,7 @@ model Income {
   @@index([categoryId])
   @@index([profileId, date])
   @@index([profileId, paymentMethod])
+  @@unique([profileId, incomeNo])
 }
 
 model IncomeItem {
@@ -456,6 +468,29 @@ model Notification {
   @@index([expiresAt])
 }
 
+// ─────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  profileId String
+  action    String   // "CREATE", "UPDATE", "DELETE", "VIEW", "EXPORT", "LOGIN", "LOGOUT", etc.
+  resource  String   // "SALE", "PURCHASE", "PARTY", "ITEM", "EXPENSE", "INCOME", etc.
+  resourceId String?
+  details   String?  // JSON string with additional details
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([profileId])
+  @@index([profileId, action])
+  @@index([profileId, resource])
+  @@index([createdAt])
+}
+
 model NotificationPreference {
   id        String   @id @default(cuid())
   userId    String
@@ -519,9 +554,13 @@ model Item {
   category       ItemCategory? @relation(fields: [categoryId], references: [id])
 
   @@index([profileId])
-  @@index([deletedAt])
+  @@index([profileId, deletedAt])
+  @@index([profileId, barcode])
+  @@index([profileId, sku])
   @@index([supplierId])
-  @@index([barcode])
+  @@index([categoryId])
+  @@index([stockQuantity])
+  @@index([deletedAt])
 }
 
 model ItemCategory {
@@ -658,10 +697,13 @@ model Sale {
   payments      Payment[]
 
   @@index([profileId])
+  @@index([profileId, deletedAt])
   @@index([partyId])
   @@index([profileId, date])
   @@index([profileId, status])
+  @@index([profileId, partyId])
   @@index([deletedAt])
+  @@unique([profileId, invoiceNo])
 }
 
 model SaleItem {
@@ -745,6 +787,7 @@ model Purchase {
   @@index([profileId, date])
   @@index([profileId, status])
   @@index([deletedAt])
+  @@unique([profileId, billNo])
 }
 
 model PurchaseItem {
@@ -785,6 +828,7 @@ model Quotation {
 
   @@index([profileId])
   @@index([partyId])
+  @@unique([profileId, quotationNo])
 }
 
 model QuotationItem {
@@ -826,6 +870,7 @@ model SalesReturn {
   @@index([profileId])
   @@index([saleId])
   @@index([partyId])
+  @@unique([profileId, returnNo])
 }
 
 model SalesReturnItem {
@@ -867,6 +912,7 @@ model PurchaseReturn {
   @@index([profileId])
   @@index([purchaseId])
   @@index([partyId])
+  @@unique([profileId, returnNo])
 }
 
 model PurchaseReturnItem {

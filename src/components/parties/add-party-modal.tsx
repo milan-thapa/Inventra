@@ -173,7 +173,7 @@ export function AddPartyModal({
                       className={cn(
                         "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
                         tab === t
-                          ? "border-emerald-500 text-emerald-500"
+                          ? "border-muted-foreground text-foreground"
                           : "border-transparent text-muted-foreground hover:text-foreground"
                       )}>
                       {t === "credit" ? "Credit Info" : "Additional Info"}
@@ -215,8 +215,8 @@ export function AddPartyModal({
                         className={cn(
                           "px-4 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
                           balanceType === "TO_RECEIVE"
-                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-500"
-                            : "border-border/50 text-muted-foreground hover:border-emerald-500/50"
+                            ? "border-muted-foreground bg-muted text-foreground"
+                            : "border-border/50 text-muted-foreground hover:border-muted-foreground"
                         )}>
                         To Receive
                       </button>

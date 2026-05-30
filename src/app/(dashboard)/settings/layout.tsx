@@ -16,6 +16,7 @@ const SETTINGS_NAV = [
 const FEATURE_NAV = [
   { label: "Parties",      href: "/settings/feature-settings/parties" },
   { label: "Transactions", href: "/settings/feature-settings/transactions" },
+  { label: "Inventory",    href: "/settings/feature-settings/inventory" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -44,10 +45,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 className={cn(
                   "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
                   active
-                    ? "bg-emerald-600/15 text-emerald-500 font-medium"
+                    ? "bg-muted text-foreground font-medium"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}>
-                <Icon className={cn("w-4 h-4", active && "text-emerald-500")} />
+                <Icon className={cn("w-4 h-4", active && "text-foreground")} />
                 {item.label}
               </Link>
             );
@@ -59,7 +60,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             className={cn(
               "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
               featureOpen || pathname.includes("feature-settings")
-                ? "bg-emerald-600/15 text-emerald-500"
+                ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}>
             <Settings className="w-4 h-4" />
@@ -76,7 +77,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                     className={cn(
                       "flex items-center px-2.5 py-1.5 rounded-lg text-xs transition-colors",
                       active
-                        ? "bg-emerald-600/15 text-emerald-500 font-medium"
+                        ? "bg-muted text-foreground font-medium"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     )}>
                     {item.label}

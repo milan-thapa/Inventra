@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Filter, Package, ArrowDownLeft, Eye, Trash2, MoreHorizontal, User, Calendar, DollarSign, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Plus, Search, Filter, Package, ArrowDownLeft, Trash2, MoreHorizontal, User, Calendar, Coins, CheckCircle2, Clock, XCircle, Eye } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,7 +150,7 @@ export default function PurchaseOutPage() {
       {/* Card-based layout like Karobar app */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredPurchaseOuts.map((purchaseOut) => (
-          <div key={purchaseOut.id} className="bg-card border border-border/50 rounded-xl p-5 hover:border-blue-500/30 hover:shadow-lg transition-all group">
+          <div key={purchaseOut.id} className="bg-card border border-border/50 rounded-xl p-5 hover:border-blue-500/30 hover:shadow-lg transition-all group cursor-pointer" onClick={() => setViewPurchaseOut(purchaseOut)}>
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -191,17 +191,9 @@ export default function PurchaseOutPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex-1"
-                onClick={() => setViewPurchaseOut(purchaseOut)}
-              >
-                <Eye className="w-4 h-4 mr-2" /> View
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={(e) => e.stopPropagation()}>
                     <MoreHorizontal className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>

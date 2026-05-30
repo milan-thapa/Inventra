@@ -7,7 +7,8 @@ import {
   Box, Package, PlusCircle, MinusCircle,
   TrendingUp, TrendingDown, AlertCircle, CheckCircle2,
   ChevronDown, ArrowLeft, Filter, Settings, X,
-  BarChart2, FileText, Calendar, Hash, Tag
+  BarChart2, FileText, Calendar, Hash, Tag, Download, Upload,
+  Barcode, Printer, Loader2
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { useProfileStore } from "@/stores/profile-store";
 import {
   getItems, deleteItem, updateItem,
   adjustStock, getItemCategories,
-  getItemActivity
+  getItemActivity, exportInventoryToCSV, importInventoryFromCSV, bulkUpdateBarcodes
 } from "@/lib/actions/inventory";
 import {
   DropdownMenu,
@@ -55,6 +56,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BarcodePrinter } from "@/components/inventory/barcode-printer";
+import { TourTrigger } from "@/components/onboarding/tour-trigger";
+import { INVENTORY_TOUR_STEPS } from "@/components/onboarding/interactive-tour";
 
 // ─── Stock adjustment modal ──────────────────────────────────────────────────
 function AdjustStockModal({
@@ -112,10 +116,10 @@ function AdjustStockModal({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-sm rounded-xl p-0 overflow-hidden border border-gray-200 dark:border-gray-800">
+      <DialogContent className="max-w-sm rounded-xl p-0 overflow-hidden border border-border">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+        <div className="px-5 py-4 border-b border-border/50">
+          <DialogTitle className="text-base font-bold text-foreground">
             {type === "ADD" ? "Add Stock" : "Reduce Stock"}
           </DialogTitle>
         </div>
@@ -123,7 +127,7 @@ function AdjustStockModal({
         <div className="px-5 py-4 space-y-4">
           {/* Quantity */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <Label className="text-xs font-semibold text-muted-foreground">
               Quantity To {type === "ADD" ? "Add" : "Reduce"}
             </Label>
             <div className="relative">
@@ -136,13 +140,13 @@ function AdjustStockModal({
                 onChange={(e) => setQty(e.target.value)}
                 autoFocus
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                 {item.unit || "PCS"}
               </span>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-muted-foreground">
               Current Stock:{" "}
-              <span className="font-semibold text-gray-700 dark:text-gray-300">
+              <span className="font-semibold text-foreground">
                 {item.stockQuantity} {item.unit || "PCS"}
               </span>
               {parsed > 0 && (
@@ -152,7 +156,7 @@ function AdjustStockModal({
                     className={cn(
                       "font-semibold",
                       type === "ADD"
-                        ? "text-emerald-600"
+                        ? "text-muted-foreground"
                         : newStock === 0
                         ? "text-red-500"
                         : "text-amber-600"
@@ -168,7 +172,7 @@ function AdjustStockModal({
           {/* Price + Date row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              <Label className="text-xs font-semibold text-muted-foreground">
                 {type === "ADD" ? "Purchase Price" : "Sales Price"}
               </Label>
               <Input
@@ -181,7 +185,7 @@ function AdjustStockModal({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              <Label className="text-xs font-semibold text-muted-foreground">
                 Adjusted Date
               </Label>
               <Input
@@ -195,7 +199,7 @@ function AdjustStockModal({
 
           {/* Remarks */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <Label className="text-xs font-semibold text-muted-foreground">
               Remarks
             </Label>
             <Input
@@ -208,7 +212,7 @@ function AdjustStockModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2.5">
+        <div className="px-5 py-3 border-t border-border/50 flex justify-end gap-2.5">
           <Button variant="outline" onClick={onClose} className="h-9 text-xs">
             Cancel
           </Button>
@@ -292,18 +296,18 @@ function ItemDetailPanel({
     });
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-950">
+    <div className="flex flex-col h-full bg-background">
       {/* Item Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between">
+      <div className="px-6 py-4 border-b border-border flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
             {initials}
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            <h2 className="text-base font-bold text-foreground">
               {item.name}
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-muted-foreground">
               {item.category?.name || "General"}
             </p>
           </div>
@@ -312,17 +316,26 @@ function ItemDetailPanel({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 text-xs text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+            className="h-8 gap-1.5 text-xs text-muted-foreground border border-border"
             onClick={onManageItem}
           >
             <Settings className="w-3.5 h-3.5" />
             Manage Item
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 text-xs text-red-600 dark:text-red-400 border border-red-500/20 dark:border-red-500/30 hover:bg-red-50/50 dark:hover:bg-red-900/20"
+            onClick={onDelete}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete
+          </Button>
         </div>
       </div>
 
       {/* Stats Row */}
-      <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800 grid grid-cols-4 gap-4">
+      <div className="px-6 py-3 border-b border-border/50 grid grid-cols-4 gap-4">
         {[
           { label: "Stock Quantity", value: `${item.stockQuantity} ${item.unit || "PCS"}` },
           { label: "Sales Price", value: formatCurrency(item.sellingPrice, profile?.currency, profile?.currencyPos) },
@@ -330,10 +343,10 @@ function ItemDetailPanel({
           { label: "Stock Value", value: formatCurrency(stockValue, profile?.currency, profile?.currencyPos) },
         ].map((stat) => (
           <div key={stat.label}>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium mb-0.5">
+            <p className="text-[10px] text-muted-foreground font-medium mb-0.5">
               {stat.label}
             </p>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">
+            <p className="text-sm font-bold text-foreground">
               {stat.value}
             </p>
           </div>
@@ -341,7 +354,7 @@ function ItemDetailPanel({
       </div>
 
       {/* Tabs */}
-      <div className="px-6 flex items-center gap-6 border-b border-gray-200 dark:border-gray-800">
+      <div className="px-6 flex items-center gap-6 border-b border-border">
         {[
           { id: "activity", label: "Item Activity" },
           { id: "details", label: "Item Details" },
@@ -352,8 +365,8 @@ function ItemDetailPanel({
             className={cn(
               "py-3 text-sm font-semibold border-b-2 transition-colors",
               activeTab === tab.id
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                ? "border-foreground text-muted-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             {tab.label}
@@ -367,34 +380,34 @@ function ItemDetailPanel({
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 text-xs gap-1 border border-gray-200 dark:border-gray-700"
+                className="h-8 text-xs gap-1 border border-border"
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
                 Sort
                 <ChevronDown className="w-3.5 h-3.5" />
               </Button>
               {showSortMenu && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 py-1">
-                  <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Sort By</p>
+                <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-10 py-1">
+                  <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sort By</p>
                   {["latest", "oldest"].map((s) => (
                     <button
                       key={s}
                       onClick={() => { setActivitySort(s as any); setShowSortMenu(false); }}
-                      className={cn("w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 capitalize flex items-center justify-between",
-                        activitySort === s && "text-emerald-600 font-semibold")}
+                      className={cn("w-full text-left px-3 py-1.5 text-xs hover:bg-muted capitalize flex items-center justify-between",
+                        activitySort === s && "text-muted-foreground font-semibold")}
                     >
                       {s.charAt(0).toUpperCase() + s.slice(1)}
                       {activitySort === s && <CheckCircle2 className="w-3 h-3" />}
                     </button>
                   ))}
-                  <div className="border-t border-gray-100 dark:border-gray-800 my-1" />
-                  <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Filter By</p>
+                  <div className="border-t border-border/50 my-1" />
+                  <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Filter By</p>
                   {FILTER_OPTIONS.map((f) => (
                     <button
                       key={f}
                       onClick={() => { setActivityFilter(f); setShowSortMenu(false); }}
-                      className={cn("w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-between",
-                        activityFilter === f && "text-emerald-600 font-semibold")}
+                      className={cn("w-full text-left px-3 py-1.5 text-xs hover:bg-muted flex items-center justify-between",
+                        activityFilter === f && "text-muted-foreground font-semibold")}
                     >
                       {f}
                       {activityFilter === f && <CheckCircle2 className="w-3 h-3" />}
@@ -417,7 +430,7 @@ function ItemDetailPanel({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={() => onStockAdjust("ADD")}>
-                <PlusCircle className="w-4 h-4 mr-2 text-emerald-600" />
+                <PlusCircle className="w-4 h-4 mr-2 text-muted-foreground" />
                 Add Stock
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onStockAdjust("REDUCE")}>
@@ -433,7 +446,7 @@ function ItemDetailPanel({
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {activeTab === "activity" ? (
           <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+            <h3 className="text-sm font-bold text-foreground mb-3">
               Item Activity ({filteredActivity.length})
             </h3>
 
@@ -443,33 +456,33 @@ function ItemDetailPanel({
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : filteredActivity.length === 0 ? (
-              <div className="py-12 text-center text-gray-400 text-sm">
+              <div className="py-12 text-center text-muted-foreground text-sm">
                 No activity found
               </div>
             ) : (
-              <div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+              <div className="border border-border rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-900">
+                  <thead className="bg-muted">
                     <tr>
                       {["Type", "Date", "Change", "Quantity", "Remarks"].map((h) => (
                         <th
                           key={h}
-                          className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                          className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
                         >
                           {h}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tbody className="divide-y divide-border/50">
                     {filteredActivity.map((act) => {
                       const isAdd = act.type === "ADD";
                       return (
-                        <tr key={act.id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                          <td className="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-300">
+                        <tr key={act.id} className="hover:bg-muted">
+                          <td className="px-4 py-3 text-xs font-medium text-foreground">
                             {isAdd ? "Add Stock" : "Reduce Stock"}
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
                             {new Date(act.createdAt).toLocaleDateString("en-US", {
                               year: "numeric", month: "short", day: "numeric"
                             })}
@@ -493,7 +506,7 @@ function ItemDetailPanel({
                               {act.newQty} {item.unit || "PCS"}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-[160px] truncate">
+                          <td className="px-4 py-3 text-xs text-muted-foreground max-w-[160px] truncate">
                             {act.reason || "—"}
                           </td>
                         </tr>
@@ -513,9 +526,9 @@ function ItemDetailPanel({
               { label: "Primary Unit", value: item.unit || "PCS" },
               { label: "Description", value: item.description || "—" },
             ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                <span className="text-sm text-gray-500 dark:text-gray-400">{label}:</span>
-                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{value}</span>
+              <div key={label} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+                <span className="text-sm text-muted-foreground">{label}:</span>
+                <span className="text-sm font-semibold text-foreground">{value}</span>
               </div>
             ))}
           </div>
@@ -545,6 +558,16 @@ export default function InventoryPage() {
   const [filterItemType, setFilterItemType] = useState("allItems");
   const [categories, setCategories] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState<any>(null);
+  
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [selectedForBarcode, setSelectedForBarcode] = useState<Set<string>>(new Set());
+  const [generatingBarcodes, setGeneratingBarcodes] = useState(false);
+  const [barcodeResults, setBarcodeResults] = useState<any>(null);
+  const [showBarcodePrinter, setShowBarcodePrinter] = useState(false);
 
   const loadItems = useCallback(async () => {
     if (!activeProfileId) return;
@@ -607,10 +630,84 @@ export default function InventoryPage() {
     setDeleteId(null);
   };
 
+  const handleExport = async () => {
+    if (!activeProfileId) return;
+    const res = await exportInventoryToCSV(activeProfileId);
+    if (res.error) {
+      toast.error(res.error);
+    } else if (res.data) {
+      const blob = new Blob([res.data], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `inventory-export-${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      toast.success("Inventory exported successfully");
+    }
+  };
+
+  const handleBulkGenerateBarcodes = async () => {
+    if (!activeProfileId || selectedForBarcode.size === 0) {
+      toast.error("Please select at least one item");
+      return;
+    }
+    
+    setGeneratingBarcodes(true);
+    const itemIds = Array.from(selectedForBarcode);
+    const res = await bulkUpdateBarcodes(activeProfileId, itemIds);
+    setGeneratingBarcodes(false);
+    
+    if (res.error) {
+      toast.error(res.error);
+    } else if (res.data) {
+      toast.success(`Generated barcodes for ${res.data.success} items`);
+      setBarcodeResults(res.data);
+      loadItems(); // Refresh items to show new barcodes
+    }
+  };
+
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedForBarcode(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllItems = () => {
+    if (selectedForBarcode.size === filteredItems.length) {
+      setSelectedForBarcode(new Set());
+    } else {
+      setSelectedForBarcode(new Set(filteredItems.map(i => i.id)));
+    }
+  };
+
+  const handleImport = async () => {
+    if (!activeProfileId || !importFile) return;
+    setImporting(true);
+    const text = await importFile.text();
+    const res = await importInventoryFromCSV(activeProfileId, text);
+    setImporting(false);
+    if (res.error) {
+      toast.error(res.error);
+    } else if (res.data) {
+      setImportResults(res.data);
+      toast.success(`Imported ${res.data.success} items successfully`);
+      if (res.data.failed > 0) {
+        toast.error(`${res.data.failed} items failed to import`);
+      }
+      loadItems();
+    }
+  };
+
   // ── Empty state ──
   if (!loading && items.length === 0) {
     return (
-      <div className="h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center bg-white dark:bg-gray-950">
+      <div className="h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center bg-background">
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-24 h-24 mx-auto">
             <svg viewBox="0 0 96 96" fill="none" className="w-full h-full opacity-50">
@@ -620,10 +717,10 @@ export default function InventoryPage() {
               <path d="M44 54l3 3 5-5" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+          <h2 className="text-xl font-bold text-foreground">
             Let&apos;s add your First Item
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Click on the add new item button and start managing your items
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
@@ -643,14 +740,20 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] flex bg-white dark:bg-gray-950 overflow-hidden">
-      {/* ── Left Panel: Item List ── */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+    <>
+      <TourTrigger 
+        tourKey="inventra-inventory-tour-completed" 
+        steps={INVENTORY_TOUR_STEPS} 
+        title="Learn how to manage your Inventory!" 
+      />
+      <div className="h-[calc(100vh-3.5rem)] flex flex-col lg:flex-row bg-background overflow-hidden">
+        {/* ── Left Panel: Item List ── */}
+        <div className="w-full lg:w-80 flex-shrink-0 border-r border-border flex flex-col lg:h-full h-auto max-h-[50vh] lg:max-h-none">
         {/* List Header */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2.5 py-1.5"
           >
             <Filter className="w-3.5 h-3.5" />
             Items ({filteredItems.length})
@@ -659,6 +762,7 @@ export default function InventoryPage() {
             size="sm"
             className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
             asChild
+            data-tour="add-item"
           >
             <Link href="/inventory/new">
               <Plus className="w-3.5 h-3.5" />
@@ -668,7 +772,7 @@ export default function InventoryPage() {
         </div>
 
         {/* Reports Button */}
-        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800">
+        <div className="px-4 py-2 border-b border-border/50">
           <Button
             variant="outline"
             className="w-full h-9 text-xs gap-2 justify-start"
@@ -681,13 +785,59 @@ export default function InventoryPage() {
           </Button>
         </div>
 
+        {/* Settings Button */}
+        <div className="px-4 py-2 border-b border-border/50">
+          <Button
+            variant="outline"
+            className="w-full h-9 text-xs gap-2 justify-start"
+            asChild
+          >
+            <Link href="/settings/feature-settings/inventory">
+              <Settings className="w-3.5 h-3.5" />
+              Inventory Settings
+            </Link>
+          </Button>
+        </div>
+
+        {/* Import/Export Button */}
+        <div className="px-4 py-2 border-b border-border/50 flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1 h-9 text-xs gap-2 justify-center"
+            onClick={handleExport}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 h-9 text-xs gap-2 justify-center"
+            onClick={() => setShowImportModal(true)}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Import
+          </Button>
+        </div>
+
+        {/* Generate Barcodes Button */}
+        <div className="px-4 py-2 border-b border-border/50">
+          <Button
+            variant="outline"
+            className="w-full h-9 text-xs gap-2 justify-start"
+            onClick={() => setShowBarcodeModal(true)}
+          >
+            <Barcode className="w-3.5 h-3.5" />
+            Generate Barcodes
+          </Button>
+        </div>
+
         {/* Search */}
-        <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+        <div className="px-3 py-2 border-b border-border/50">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Search items..."
-              className="pl-8 h-8 text-xs bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+              className="pl-8 h-8 text-xs bg-muted border-border"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -695,12 +845,12 @@ export default function InventoryPage() {
         </div>
 
         {/* Filter Chips */}
-        <div className="px-3 py-2 flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-800">
+        <div className="px-3 py-2 flex items-center gap-1.5 border-b border-border/50" data-tour="stock-filter">
           {/* Category */}
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="h-7 text-[10px] px-1.5 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 font-medium flex-shrink-0"
+            className="h-7 text-[10px] px-1.5 border border-border rounded-md bg-card text-foreground font-medium flex-shrink-0"
           >
             <option value="all">All Categories</option>
             {categories.map((c) => (
@@ -712,7 +862,7 @@ export default function InventoryPage() {
           <select
             value={filterStock}
             onChange={(e) => setFilterStock(e.target.value)}
-            className="h-7 text-[10px] px-1.5 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 font-medium flex-shrink-0"
+            className="h-7 text-[10px] px-1.5 border border-border rounded-md bg-card text-foreground font-medium flex-shrink-0"
           >
             <option value="all">All Stock</option>
             <option value="in-stock">In Stock</option>
@@ -723,7 +873,7 @@ export default function InventoryPage() {
           <select
             value={filterItemType}
             onChange={(e) => setFilterItemType(e.target.value)}
-            className="h-7 text-[10px] px-1.5 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 font-medium flex-shrink-0"
+            className="h-7 text-[10px] px-1.5 border border-border rounded-md bg-card text-foreground font-medium flex-shrink-0"
           >
             <option value="allItems">All Items</option>
             <option value="product">Product</option>
@@ -732,7 +882,7 @@ export default function InventoryPage() {
         </div>
 
         {/* Items List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" data-tour="item-cards">
           {loading ? (
             <div className="p-3 space-y-2">
               {[1, 2, 3, 4].map((i) => (
@@ -740,7 +890,7 @@ export default function InventoryPage() {
               ))}
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-400">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               No items match your filters
             </div>
           ) : (
@@ -765,18 +915,18 @@ export default function InventoryPage() {
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors",
-                    isSelected && "bg-emerald-50 dark:bg-emerald-900/20 border-l-2 border-l-emerald-600"
+                    "flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-border/50 hover:bg-muted transition-colors",
+                    isSelected && "bg-muted/20 border-l-2 border-l-foreground"
                   )}
                 >
-                  <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-muted-foreground flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">
+                    <p className="text-sm font-semibold text-foreground truncate">
                       {item.name}
                     </p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-[11px] text-muted-foreground truncate">
                       {item.category?.name || "General"}
                     </p>
                   </div>
@@ -819,7 +969,7 @@ export default function InventoryPage() {
             onDelete={() => setDeleteId(selectedItem.id)}
           />
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             Select an item to view details
           </div>
         )}
@@ -858,6 +1008,210 @@ export default function InventoryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Modal */}
+      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+        <DialogContent className="max-w-md rounded-xl p-0 overflow-hidden border border-border">
+          <div className="px-5 py-4 border-b border-border/50">
+            <DialogTitle className="text-base font-bold text-foreground">
+              Import Items from CSV
+            </DialogTitle>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground">
+                Select CSV File
+              </Label>
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="text-sm"
+              />
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>CSV format: Name, SKU, Category, Type, Stock Quantity, Unit, Purchase Price, Selling Price, Low Stock Alert, Description</p>
+              <p>Only &quot;Name&quot; is required. Other fields are optional.</p>
+            </div>
+            {importResults && (
+              <div className="bg-muted rounded-lg p-3 space-y-2">
+                <p className="text-sm font-semibold text-foreground">
+                  Import Results:
+                </p>
+                <p className="text-xs text-emerald-600">✓ {importResults.success} items imported successfully</p>
+                {importResults.failed > 0 && (
+                  <p className="text-xs text-red-600">✗ {importResults.failed} items failed</p>
+                )}
+                {importResults.errors.length > 0 && (
+                  <div className="text-xs text-muted-foreground space-y-1 max-h-20 overflow-y-auto">
+                    {importResults.errors.map((error: string, idx: number) => (
+                      <p key={idx}>{error}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="px-5 py-3 border-t border-border/50 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowImportModal(false);
+                setImportFile(null);
+                setImportResults(null);
+              }}
+              className="h-9 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={!importFile || importing}
+              className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {importing ? "Importing..." : "Import"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Barcode Generation Modal */}
+      <Dialog open={showBarcodeModal} onOpenChange={setShowBarcodeModal}>
+        <DialogContent className="max-w-2xl rounded-xl p-0 overflow-hidden border border-border max-h-[80vh] flex flex-col">
+          <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+            <DialogTitle className="text-base font-bold text-foreground">
+              Generate Barcodes for Items
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={selectAllItems}
+              className="h-8 text-xs"
+            >
+              {selectedForBarcode.size === filteredItems.length ? "Deselect All" : "Select All"}
+            </Button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="space-y-2">
+              {filteredItems.map((item) => {
+                const isSelected = selectedForBarcode.has(item.id);
+                const hasBarcode = !!item.barcode;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => toggleItemSelection(item.id)}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors",
+                      isSelected ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800" : "bg-card border-border hover:bg-muted"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={cn(
+                        "w-5 h-5 rounded border-2 flex items-center justify-center",
+                        isSelected ? "bg-emerald-600 border-emerald-600" : "border-border"
+                      )}>
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.sku && `SKU: ${item.sku} • `}
+                          Stock: {item.stockQuantity} {item.unit || "PCS"}
+                        </p>
+                      </div>
+                    </div>
+                    {hasBarcode && (
+                      <Badge variant="secondary" className="text-xs">
+                        {item.barcode}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {barcodeResults && (
+            <div className="px-5 py-3 bg-muted border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Generation Complete
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {barcodeResults.success} barcodes generated successfully
+                    {barcodeResults.failed > 0 && ` • ${barcodeResults.failed} failed`}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => setShowBarcodePrinter(true)}
+                    className="h-8 text-xs gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Print Barcodes
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setBarcodeResults(null)}
+                    className="h-8 text-xs"
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="px-5 py-3 border-t border-border/50 flex justify-between items-center">
+            <p className="text-xs text-muted-foreground">
+              {selectedForBarcode.size} item{selectedForBarcode.size !== 1 && "s"} selected
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBarcodeModal(false);
+                  setSelectedForBarcode(new Set());
+                  setBarcodeResults(null);
+                }}
+                className="h-9 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkGenerateBarcodes}
+                disabled={selectedForBarcode.size === 0 || generatingBarcodes}
+                className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {generatingBarcodes ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Barcode className="w-3.5 h-3.5 mr-1.5" />
+                    Generate Barcodes
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Barcode Printer Modal */}
+      <BarcodePrinter
+        open={showBarcodePrinter}
+        onClose={() => setShowBarcodePrinter(false)}
+        items={filteredItems.filter(item => item.barcode)}
+        currency={profile?.currency}
+        currencyPos={profile?.currencyPos}
+      />
     </div>
+    </>
   );
 }

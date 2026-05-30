@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, Edit, Percent, DollarSign, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Trash2, Edit, Percent, Coins, Calendar, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -171,7 +171,7 @@ export default function DiscountsPage() {
                     {discount.type === "PERCENTAGE" ? (
                       <Percent className="w-5 h-5 text-purple-600" />
                     ) : (
-                      <DollarSign className="w-5 h-5 text-purple-600" />
+                      <Coins className="w-5 h-5 text-purple-600" />
                     )}
                   </div>
                   <div>

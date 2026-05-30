@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Calendar, TrendingUp, Package, AlertTriangle, Box, DollarSign, BarChart3, ArrowLeft } from "lucide-react";
+import { Download, Calendar, TrendingUp, Package, AlertTriangle, Box, Coins, BarChart3, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,14 +64,14 @@ export default function InventoryReportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-muted">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
+      <div className="bg-background border-b border-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/reports" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+          <Link href="/reports" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Inventory Report</h1>
+          <h1 className="text-base font-bold text-foreground">Inventory Report</h1>
         </div>
         <Button
           onClick={handleExport}
@@ -86,11 +86,11 @@ export default function InventoryReportPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Date Filter */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+        <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</span>
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Date Range:</span>
             </div>
             <Input
               type="date"
@@ -98,7 +98,7 @@ export default function InventoryReportPage() {
               onChange={(e) => setStartDate(e.target.value)}
               className="h-9 w-40 text-sm"
             />
-            <span className="text-gray-400">to</span>
+            <span className="text-muted-foreground">to</span>
             <Input
               type="date"
               value={endDate}
@@ -138,82 +138,82 @@ export default function InventoryReportPage() {
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <Package className="w-4 h-4 text-emerald-600" />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Items</span>
+                  <span className="text-xs font-medium text-muted-foreground">Total Items</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.summary.totalItems}
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <Box className="w-4 h-4 text-blue-600" />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Stock</span>
+                  <span className="text-xs font-medium text-muted-foreground">Total Stock</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.summary.totalStock}
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-green-600" />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Value</span>
+                  <Coins className="w-4 h-4 text-green-600" />
+                  <span className="text-xs font-medium text-muted-foreground">Total Value</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {formatCurrency(reports.summary.totalValue)}
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Low Stock</span>
+                  <span className="text-xs font-medium text-muted-foreground">Low Stock</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.summary.lowStockCount}
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-4 h-4 text-red-600" />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Out of Stock</span>
+                  <span className="text-xs font-medium text-muted-foreground">Out of Stock</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.summary.outOfStockCount}
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <BarChart3 className="w-4 h-4 text-purple-600" />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Stock Added</span>
+                  <span className="text-xs font-medium text-muted-foreground">Stock Added</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.summary.stockAdded}
                 </p>
               </div>
             </div>
 
             {/* Category Analysis */}
-            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Category Analysis</h2>
+            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-foreground">Category Analysis</h2>
               </div>
-              <div className="divide-y divide-gray-200 dark:border-gray-800">
+              <div className="divide-y divide-border">
                 {reports.categoryAnalysis.map((cat: any, idx: number) => (
-                  <div key={idx} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                  <div key={idx} className="px-6 py-4 flex items-center justify-between hover:bg-muted">
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{cat.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{cat.itemCount} items</p>
+                      <p className="font-medium text-foreground">{cat.name}</p>
+                      <p className="text-sm text-muted-foreground">{cat.itemCount} items</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900 dark:text-white">{cat.totalStock} units</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{formatCurrency(cat.totalValue)}</p>
+                      <p className="font-semibold text-foreground">{cat.totalStock} units</p>
+                      <p className="text-sm text-muted-foreground">{formatCurrency(cat.totalValue)}</p>
                     </div>
                   </div>
                 ))}
@@ -222,20 +222,20 @@ export default function InventoryReportPage() {
 
             {/* Low Stock Items */}
             {reports.lowStockItems.length > 0 && (
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Low Stock Items</h2>
+              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-border">
+                  <h2 className="text-lg font-semibold text-foreground">Low Stock Items</h2>
                 </div>
-                <div className="divide-y divide-gray-200 dark:border-gray-800">
+                <div className="divide-y divide-border">
                   {reports.lowStockItems.map((item: any) => (
-                    <div key={item.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                    <div key={item.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted">
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{item.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.category?.name || "General"}</p>
+                        <p className="font-medium text-foreground">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">{item.category?.name || "General"}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-amber-600">{item.stockQuantity} / {item.reorderPoint}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.unit || "PCS"}</p>
+                        <p className="text-sm text-muted-foreground">{item.unit || "PCS"}</p>
                       </div>
                     </div>
                   ))}
@@ -245,20 +245,20 @@ export default function InventoryReportPage() {
 
             {/* Out of Stock Items */}
             {reports.outOfStockItems.length > 0 && (
-              <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Out of Stock Items</h2>
+              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-border">
+                  <h2 className="text-lg font-semibold text-foreground">Out of Stock Items</h2>
                 </div>
-                <div className="divide-y divide-gray-200 dark:border-gray-800">
+                <div className="divide-y divide-border">
                   {reports.outOfStockItems.map((item: any) => (
-                    <div key={item.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                    <div key={item.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted">
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{item.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.category?.name || "General"}</p>
+                        <p className="font-medium text-foreground">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">{item.category?.name || "General"}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-red-600">0 units</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.unit || "PCS"}</p>
+                        <p className="text-sm text-muted-foreground">{item.unit || "PCS"}</p>
                       </div>
                     </div>
                   ))}
@@ -267,13 +267,13 @@ export default function InventoryReportPage() {
             )}
 
             {/* Stock Movements */}
-            <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Stock Movements</h2>
+            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-foreground">Recent Stock Movements</h2>
               </div>
-              <div className="divide-y divide-gray-200 dark:border-gray-800">
+              <div className="divide-y divide-border">
                 {reports.movements.map((movement: any) => (
-                  <div key={movement.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                  <div key={movement.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted">
                     <div>
                       <p className={cn(
                         "font-medium",
@@ -281,13 +281,13 @@ export default function InventoryReportPage() {
                       )}>
                         {movement.type === "ADD" ? "Stock Added" : "Stock Reduced"}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{movement.reason || "No reason"}</p>
+                      <p className="text-sm text-muted-foreground">{movement.reason || "No reason"}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900 dark:text-white">
+                      <p className="font-semibold text-foreground">
                         {movement.type === "ADD" ? "+" : "-"}{movement.quantity}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         {new Date(movement.createdAt).toLocaleDateString()}
                       </p>
                     </div>

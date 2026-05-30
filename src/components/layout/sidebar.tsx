@@ -10,6 +10,7 @@ import {
   BarChart3, Wrench, HelpCircle, BookOpen, Sparkles,
   Settings, CreditCard, Gift, Bell, Image as ImageIcon, ChevronDown,
   ChevronRight, Plus, Check, Menu, X, Package, Tag, ShoppingCart, Store,
+  FileText, RotateCcw,
 } from "lucide-react";
 import { cn, getInitials, getAvatarColor } from "@/lib/utils";
 import { useUIStore } from "@/stores/profile-store";
@@ -32,12 +33,18 @@ const BUSINESS_NAV_ITEMS = [
   { label: "Quick POS", href: "/sales/quick-pos", icon: Store },
   { label: "Parties", href: "/parties", icon: Users },
   { label: "Inventory", href: "/inventory", icon: Package },
-  { label: "Sales", href: "/sales", icon: Tag },
   { label: "Purchase", href: "/purchase", icon: ShoppingCart },
   { label: "Expense", href: "/expense", icon: Receipt },
   { label: "Other Income", href: "/income", icon: Wallet },
   { label: "Manage Accounts", href: "/manage-account", icon: Building2 },
   { label: "Reports", href: "/reports", icon: BarChart3 },
+];
+
+const SALES_SUB_ITEMS = [
+  { label: "Sales Invoices", href: "/sales", icon: Receipt },
+  { label: "Payment In", href: "/sales/payment-in", icon: Wallet },
+  { label: "Quotations", href: "/sales/quotations", icon: FileText },
+  { label: "Sales Returns", href: "/sales/returns", icon: RotateCcw },
 ];
 
 const TOOLS_ITEMS = [
@@ -74,6 +81,7 @@ export function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const { activeProfileId, profiles, setActiveProfileId, setProfiles } = useProfileStore();
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [salesOpen, setSalesOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -110,6 +118,7 @@ export function Sidebar() {
   };
 
   const isToolsActive = TOOLS_ITEMS.some((item) => pathname.startsWith(item.href));
+  const isSalesActive = SALES_SUB_ITEMS.some((item) => pathname.startsWith(item.href));
 
   if (!sidebarOpen) return null;
 
@@ -117,11 +126,11 @@ export function Sidebar() {
     <>
       {/* Mobile overlay */}
       <div
-        className="fixed inset-0 bg-black/50 z-20 md:hidden"
+        className="fixed inset-0 bg-black/50 z-40 md:hidden"
         onClick={() => useUIStore.getState().setSidebarOpen(false)}
       />
 
-      <aside className="sidebar fixed md:relative z-30 md:z-auto flex flex-col h-full overflow-y-auto border-r border-border/50 select-none" data-tour="sidebar">
+      <aside className={`sidebar fixed md:relative z-50 md:z-auto flex flex-col h-full overflow-y-auto border-r border-border/50 select-none ${sidebarOpen ? 'open' : ''}`} data-tour="sidebar">
 
         {/* ── Top bar: Logo only (hamburger lives in header) ── */}
         <div className="h-14 flex items-center px-4 border-b border-border/50 flex-shrink-0">
@@ -225,18 +234,82 @@ export function Sidebar() {
         </div>
 
         {/* ── Main Navigation ──────────────────────────────── */}
-        <nav className="flex-1 p-2 space-y-0.5">
-          <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-2 py-1 mt-1">
+        <nav className="flex-1 p-2 space-y-0.5" aria-label="Main navigation">
+          <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-2 py-1 mt-1" role="heading" aria-level={2}>
             {activeProfile?.type === "BUSINESS" ? "Business" : "Personal"}
           </p>
 
-          {(activeProfile?.type === "BUSINESS" ? BUSINESS_NAV_ITEMS : PERSONAL_NAV_ITEMS).map((item) => (
-            <NavItem
-              key={item.href}
-              {...item}
-              active={isActive(item.href)}
-            />
-          ))}
+          {activeProfile?.type === "BUSINESS" ? (
+            <>
+              {/* Dashboard, Quick POS, Parties, Inventory */}
+              {BUSINESS_NAV_ITEMS.slice(0, 4).map((item) => (
+                <NavItem
+                  key={item.href}
+                  {...item}
+                  active={isActive(item.href)}
+                />
+              ))}
+
+              {/* Sales (collapsible) - after Inventory */}
+              <>
+                <button
+                  onClick={() => setSalesOpen(!salesOpen)}
+                  aria-expanded={salesOpen}
+                  aria-controls="sales-menu"
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors",
+                    isSalesActive
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <Tag className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                  <span className="flex-1 text-left">Sales</span>
+                  <ChevronRight className={cn(
+                    "w-3.5 h-3.5 transition-transform",
+                    salesOpen && "rotate-90"
+                  )} aria-hidden="true" />
+                </button>
+
+                <AnimatePresence>
+                  {salesOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden pl-4"
+                      id="sales-menu"
+                    >
+                      {SALES_SUB_ITEMS.map((item) => (
+                        <NavItem
+                          key={item.href}
+                          {...item}
+                          active={pathname.startsWith(item.href)}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+
+              {/* Purchase, Expense, Other Income, Manage Accounts, Reports */}
+              {BUSINESS_NAV_ITEMS.slice(4).map((item) => (
+                <NavItem
+                  key={item.href}
+                  {...item}
+                  active={isActive(item.href)}
+                />
+              ))}
+            </>
+          ) : (
+            PERSONAL_NAV_ITEMS.map((item) => (
+              <NavItem
+                key={item.href}
+                {...item}
+                active={isActive(item.href)}
+              />
+            ))
+          )}
 
           {/* ── Others section ──────────────────────────── */}
           <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-2 py-1 mt-3">
@@ -251,7 +324,7 @@ export function Sidebar() {
             className={cn(
               "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors",
               isToolsActive
-                ? "bg-emerald-600/15 text-emerald-500"
+                ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
@@ -313,12 +386,12 @@ function NavItem({
       className={cn(
         "flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors",
         active
-          ? "bg-emerald-600/15 text-emerald-500 font-medium"
+          ? "bg-muted text-foreground font-medium"
           : "text-muted-foreground hover:bg-accent hover:text-foreground"
       )}
       aria-current={active ? "page" : undefined}
     >
-      <Icon className={cn("w-4 h-4 flex-shrink-0", active && "text-emerald-500")} aria-hidden="true" />
+      <Icon className={cn("w-4 h-4 flex-shrink-0", active && "text-foreground")} aria-hidden="true" />
       <span className="truncate">{label}</span>
     </Link>
   );

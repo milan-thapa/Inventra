@@ -7,7 +7,7 @@ import { format, subDays, subMonths, startOfDay, endOfDay } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Package } from "lucide-react";
+import { TrendingUp, TrendingDown, Coins, ShoppingCart, Users, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SalesReportsPage() {
@@ -127,7 +127,7 @@ export default function SalesReportsPage() {
         <div className="bg-card border border-border/50 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Coins className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="text-2xl font-bold">{formatCurrency(totalRevenue, profile?.currency)}</div>
           <p className="text-xs text-muted-foreground mt-1">

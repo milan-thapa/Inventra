@@ -61,37 +61,37 @@ function MeasuringUnitModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm p-0 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <DialogTitle className="text-sm font-bold text-gray-900 dark:text-white">
+      <DialogContent className="max-w-sm p-0 rounded-xl border border-border overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/50">
+          <DialogTitle className="text-sm font-bold text-foreground">
             Select Measuring Unit
           </DialogTitle>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Primary Unit</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">Primary Unit</Label>
             <select
               value={primary}
               onChange={(e) => setPrimary(e.target.value)}
-              className="w-full h-10 px-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full h-10 px-3 text-sm border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">e.g. Kilogram</option>
               {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Secondary Unit</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">Secondary Unit</Label>
             <select
               value={secondary}
               onChange={(e) => setSecondary(e.target.value)}
-              className="w-full h-10 px-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full h-10 px-3 text-sm border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">e.g. Gram</option>
               {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Conversion Rate</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">Conversion Rate</Label>
             <Input
               type="number"
               placeholder="e.g. 1"
@@ -102,7 +102,7 @@ function MeasuringUnitModal({
             />
           </div>
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2.5">
+        <div className="px-5 py-3 border-t border-border/50 flex justify-end gap-2.5">
           <Button variant="outline" onClick={onClose} className="h-9 text-xs">Cancel</Button>
           <Button onClick={handleSave} className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">Save</Button>
         </div>
@@ -127,12 +127,13 @@ export default function EditItemPage() {
   const [categoryId, setCategoryId] = useState("none");
   const [itemType, setItemType] = useState<"PRODUCT" | "SERVICE">("PRODUCT");
   const [unit, setUnit] = useState("PCS");
-  const [salesPrice, setSalesPrice] = useState("");
+  const [sellingPrice, setSellingPrice] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [lowStockAlert, setLowStockAlert] = useState(true);
   const [lowStockQty, setLowStockQty] = useState("10");
   const [description, setDescription] = useState("");
   const [sku, setSku] = useState("");
+  const [barcode, setBarcode] = useState("");
 
   const [showUnitModal, setShowUnitModal] = useState(false);
 
@@ -148,12 +149,13 @@ export default function EditItemPage() {
         setCategoryId(d.categoryId || "none");
         setItemType((d.type as any) || "PRODUCT");
         setUnit(d.unit || "PCS");
-        setSalesPrice(String(d.sellingPrice || ""));
+        setSellingPrice(String(d.sellingPrice || ""));
         setPurchasePrice(String(d.purchasePrice || ""));
         setLowStockAlert(!!d.reorderPoint);
         setLowStockQty(String(d.reorderPoint || 10));
         setDescription(d.description || "");
         setSku(d.sku || "");
+        setBarcode(d.barcode || "");
       } else {
         toast.error(itemRes.error || "Item not found");
         router.push("/inventory");
@@ -172,8 +174,9 @@ export default function EditItemPage() {
     const res = await updateItem(activeProfileId, itemId, {
       name: name.trim(),
       sku: sku || undefined,
+      barcode: barcode || undefined,
       purchasePrice: parseFloat(purchasePrice) || 0,
-      sellingPrice: parseFloat(salesPrice) || 0,
+      sellingPrice: parseFloat(sellingPrice) || 0,
       unit,
       type: itemType,
       description: description || undefined,
@@ -192,8 +195,8 @@ export default function EditItemPage() {
 
   if (pageLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+      <div className="min-h-screen bg-background">
+        <div className="bg-card border-b border-border px-6 py-4">
           <Skeleton className="h-6 w-32" />
         </div>
         <div className="max-w-2xl mx-auto px-6 py-6 space-y-4">
@@ -206,17 +209,17 @@ export default function EditItemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       {/* ── Header ── */}
-      <div className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
+      <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/inventory" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+          <Link href="/inventory" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Edit Item</h1>
+          <h1 className="text-base font-bold text-foreground">Edit Item</h1>
         </div>
-        <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-          <Settings className="w-4.5 h-4.5 text-gray-500" />
+        <button className="p-2 rounded-lg hover:bg-muted">
+          <Settings className="w-4.5 h-4.5 text-muted-foreground" />
         </button>
       </div>
 
@@ -224,10 +227,10 @@ export default function EditItemPage() {
       <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
         {/* Item Name */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Item Name</Label>
+          <Label className="text-xs font-semibold text-muted-foreground">Item Name</Label>
           <Input
             placeholder="e.g. MacBook"
-            className="h-11 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+            className="h-11 text-sm bg-card border-border"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -236,9 +239,9 @@ export default function EditItemPage() {
         {/* Category + Item Type */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Item Category</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">Item Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="h-11 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+              <SelectTrigger className="h-11 text-sm bg-card border-border">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -251,7 +254,7 @@ export default function EditItemPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Item Type</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">Item Type</Label>
             <div className="flex items-center gap-2 h-11">
               {(["PRODUCT", "SERVICE"] as const).map((t) => (
                 <button
@@ -261,8 +264,8 @@ export default function EditItemPage() {
                   className={cn(
                     "h-9 px-4 rounded-lg text-xs font-semibold border transition-all",
                     itemType === t
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                      : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-emerald-300"
+                      ? "bg-muted-foreground text-white border-muted-foreground shadow-sm"
+                      : "bg-card text-muted-foreground border-border hover:border-foreground"
                   )}
                 >
                   {t.charAt(0) + t.slice(1).toLowerCase()}
@@ -273,8 +276,8 @@ export default function EditItemPage() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-          <div className="flex border-b border-gray-200 dark:border-gray-800">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex border-b border-border">
             {[
               { id: "stock", label: "Stock Details" },
               { id: "others", label: "Others" },
@@ -285,8 +288,8 @@ export default function EditItemPage() {
                 className={cn(
                   "flex-1 py-3 text-sm font-semibold border-b-2 transition-colors",
                   activeTab === tab.id
-                    ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                    ? "border-muted-foreground text-muted-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 {tab.label}
@@ -299,23 +302,23 @@ export default function EditItemPage() {
               <>
                 {/* Measuring Unit */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  <Label className="text-xs font-semibold text-muted-foreground">
                     Measuring Unit
                   </Label>
                   <button
                     type="button"
                     onClick={() => setShowUnitModal(true)}
-                    className="w-full h-10 flex items-center justify-between px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 hover:border-emerald-400 transition-colors group"
+                    className="w-full h-10 flex items-center justify-between px-3 border border-border rounded-lg bg-card hover:border-emerald-400 transition-colors group"
                   >
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{unit}</span>
-                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 flex-shrink-0" />
+                    <span className="text-sm text-foreground truncate">{unit}</span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-emerald-500 flex-shrink-0" />
                   </button>
                 </div>
 
                 {/* Sales Price + Purchase Price */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Sales Price</Label>
+                    <Label className="text-xs font-semibold text-muted-foreground">Sales Price</Label>
                     <div className="relative">
                       <Input
                         type="number"
@@ -323,16 +326,16 @@ export default function EditItemPage() {
                         min="0"
                         placeholder="0.00"
                         className="pr-16 h-10 text-sm"
-                        value={salesPrice}
-                        onChange={(e) => setSalesPrice(e.target.value)}
+                        value={sellingPrice}
+                        onChange={(e) => setSellingPrice(e.target.value)}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                         /{unit.split(" ")[0]}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Purchase Price</Label>
+                    <Label className="text-xs font-semibold text-muted-foreground">Purchase Price</Label>
                     <div className="relative">
                       <Input
                         type="number"
@@ -343,7 +346,7 @@ export default function EditItemPage() {
                         value={purchasePrice}
                         onChange={(e) => setPurchasePrice(e.target.value)}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                         /{unit.split(" ")[0]}
                       </span>
                     </div>
@@ -355,14 +358,14 @@ export default function EditItemPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-amber-500" />
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Low Stock Alert</span>
+                      <span className="text-sm font-semibold text-foreground">Low Stock Alert</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setLowStockAlert(!lowStockAlert)}
                       className={cn(
                         "relative w-11 h-6 rounded-full transition-colors",
-                        lowStockAlert ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                        lowStockAlert ? "bg-emerald-500" : "bg-muted-foreground"
                       )}
                     >
                       <span className={cn(
@@ -373,17 +376,17 @@ export default function EditItemPage() {
                   </div>
                   {lowStockAlert && (
                     <div className="mt-3 space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Low Stock Quantity</Label>
+                      <Label className="text-xs font-semibold text-muted-foreground">Low Stock Quantity</Label>
                       <div className="relative">
                         <Input
                           type="number"
                           min="0"
                           placeholder="10"
-                          className="pr-14 h-10 text-sm bg-white dark:bg-gray-900"
+                          className="pr-14 h-10 text-sm bg-card"
                           value={lowStockQty}
                           onChange={(e) => setLowStockQty(e.target.value)}
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                           {unit.split(" ")[0]}
                         </span>
                       </div>
@@ -394,7 +397,7 @@ export default function EditItemPage() {
             ) : (
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">SKU / Item Code</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">SKU / Item Code</Label>
                   <Input
                     placeholder="e.g. MAC3PRO"
                     className="h-10 text-sm"
@@ -403,11 +406,20 @@ export default function EditItemPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Description</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Barcode</Label>
+                  <Input
+                    placeholder="e.g. 1234567890"
+                    className="h-10 text-sm"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground">Description</Label>
                   <textarea
                     placeholder="Enter item description..."
                     rows={3}
-                    className="w-full text-sm px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full text-sm px-3 py-2 border border-border rounded-lg bg-card text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />

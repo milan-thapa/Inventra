@@ -117,8 +117,8 @@ export default function HelpPage() {
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
                   active
-                    ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
-                    : "bg-muted/30 text-muted-foreground border border-border/50 hover:text-foreground hover:border-emerald-500/30"
+                    ? "bg-muted text-foreground border border-border"
+                    : "bg-muted/30 text-muted-foreground border border-border/50 hover:text-foreground hover:border-border"
                 )}
               >
                 <Icon className="w-4 h-4" />

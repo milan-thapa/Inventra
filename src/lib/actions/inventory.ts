@@ -444,3 +444,197 @@ export async function getInventoryReports(profileId: string, options?: {
   }
 }
 
+// ─── Bulk Import/Export ────────────────────────────────────────────────────────
+
+export async function exportInventoryToCSV(profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const items = await db.item.findMany({
+      where: { profileId },
+      include: {
+        category: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: { name: "asc" }
+    });
+
+    const headers = ["Name", "SKU", "Category", "Type", "Stock Quantity", "Unit", "Purchase Price", "Selling Price", "Low Stock Alert", "Description"];
+    const rows = items.map(item => [
+      item.name,
+      item.sku || "",
+      item.category?.name || "General",
+      item.type || "PRODUCT",
+      String(item.stockQuantity || 0),
+      item.unit || "PCS",
+      String(item.purchasePrice || 0),
+      String(item.sellingPrice || 0),
+      item.reorderPoint ? String(item.reorderPoint) : "",
+      item.description || ""
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.map(cell => `"${cell}"`).join(","))].join("\n");
+    return { data: csvContent };
+  } catch (e) {
+    logger.error("Failed to export inventory", e, { profileId });
+    return { error: "Failed to export inventory" };
+  }
+}
+
+export async function importInventoryFromCSV(profileId: string, csvContent: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const lines = csvContent.split("\n").filter(line => line.trim());
+    if (lines.length < 2) return { error: "CSV file is empty or invalid" };
+
+    const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, "").toLowerCase());
+    const requiredHeaders = ["name"];
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    if (missingHeaders.length > 0) {
+      return { error: `Missing required headers: ${missingHeaders.join(", ")}` };
+    }
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    for (let i = 1; i < lines.length; i++) {
+      try {
+        const values = lines[i].split(",").map(v => v.trim().replace(/"/g, ""));
+        const item: any = {
+          name: values[headers.indexOf("name")] || "",
+          sku: values[headers.indexOf("sku")] || undefined,
+          categoryId: undefined,
+          type: (values[headers.indexOf("type")] || "PRODUCT").toUpperCase(),
+          stockQuantity: parseInt(values[headers.indexOf("stockquantity")] || values[headers.indexOf("stock")] || "0") || 0,
+          unit: values[headers.indexOf("unit")] || "PCS",
+          purchasePrice: parseFloat(values[headers.indexOf("purchaseprice")] || values[headers.indexOf("purchase price")] || "0") || 0,
+          sellingPrice: parseFloat(values[headers.indexOf("sellingprice")] || values[headers.indexOf("selling price")] || "0") || 0,
+          reorderPoint: parseInt(values[headers.indexOf("lowstockalert")] || values[headers.indexOf("low stock")] || "0") || undefined,
+          description: values[headers.indexOf("description")] || undefined
+        };
+
+        if (!item.name) {
+          results.failed++;
+          results.errors.push(`Row ${i + 1}: Name is required`);
+          continue;
+        }
+
+        // Handle category
+        const categoryName = values[headers.indexOf("category")] || "General";
+        if (categoryName && categoryName !== "General") {
+          const existingCategory = await db.itemCategory.findFirst({
+            where: { profileId, name: categoryName }
+          });
+          if (existingCategory) {
+            item.categoryId = existingCategory.id;
+          } else {
+            const newCategory = await db.itemCategory.create({
+              data: { profileId, name: categoryName }
+            });
+            item.categoryId = newCategory.id;
+          }
+        }
+
+        await db.item.create({
+          data: {
+            ...item,
+            profileId
+          }
+        });
+
+        results.success++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push(`Row ${i + 1}: Failed to import item`);
+      }
+    }
+
+    revalidatePath("/inventory");
+    return { data: results };
+  } catch (e) {
+    logger.error("Failed to import inventory", e, { profileId });
+    return { error: "Failed to import inventory" };
+  }
+}
+
+export async function findItemByBarcode(profileId: string, barcode: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const item = await db.item.findFirst({
+      where: {
+        profileId,
+        barcode,
+        deletedAt: null
+      },
+      include: {
+        category: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!item) {
+      return { error: "Item not found" };
+    }
+
+    return { data: item };
+  } catch (e) {
+    logger.error("Failed to find item by barcode", e, { profileId, barcode });
+    return { error: "Failed to find item" };
+  }
+}
+
+export async function bulkUpdateBarcodes(
+  profileId: string,
+  itemIds: string[]
+) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
+  try {
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    for (const itemId of itemIds) {
+      try {
+        // Generate unique barcode number
+        const timestamp = Date.now().toString().slice(-6);
+        const hash = itemId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const uniquePart = (hash % 10000).toString().padStart(4, "0");
+        const barcode = `${timestamp}${uniquePart}`;
+
+        await db.item.update({
+          where: { id: itemId, profileId },
+          data: { barcode }
+        });
+
+        results.success++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push(`Failed to update barcode for item ${itemId}`);
+      }
+    }
+
+    revalidatePath("/inventory");
+    return { data: results };
+  } catch (e) {
+    logger.error("Failed to bulk update barcodes", e, { profileId, itemIds });
+    return { error: "Failed to bulk update barcodes" };
+  }
+}
