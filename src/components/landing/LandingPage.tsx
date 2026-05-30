@@ -3,9 +3,6 @@
 import { Navbar } from "./Navbar";
 import { Hero } from "./Hero";
 import { Features } from "./Features";
-import { About } from "./About";
-import { Pricing } from "./Pricing";
-import { Contact } from "./Contact";
 import { CTASection } from "./CTASection";
 import { Footer } from "./Footer";
 
@@ -16,9 +13,6 @@ export default function LandingPage() {
       <main>
         <Hero />
         <Features />
-        <About />
-        <Pricing />
-        <Contact />
         <CTASection />
       </main>
       <Footer />
