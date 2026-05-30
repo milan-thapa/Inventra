@@ -41,7 +41,7 @@ export async function rateLimitByIdentifier(
 ) {
   const limiter = new Ratelimit({
     redis: redis,
-    limiter: Ratelimit.slidingWindow(limit, window),
+    limiter: Ratelimit.slidingWindow(limit, window as any),
     analytics: true,
     prefix: `custom-${identifier}`,
   });
