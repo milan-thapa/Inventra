@@ -107,7 +107,7 @@ export default function AddPurchasePage() {
     const res = await createPurchase(activeProfileId, data);
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Purchase bill created successfully");

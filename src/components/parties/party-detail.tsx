@@ -69,7 +69,7 @@ export function PartyDetail({
     setDeleting(true);
     setMenuOpen(false);
     const res = await deleteParty(profileId, party.id);
-    if (res.error) {
+    if ("error" in res && res.error) {
       alert(res.error);
       setDeleting(false);
     } else {

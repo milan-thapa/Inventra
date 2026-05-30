@@ -56,7 +56,7 @@ export default function PurchasePage() {
     if (!activeProfileId || !deleteId) return;
     
     const res = await deletePurchase(activeProfileId, deleteId);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Purchase bill deleted and inventory updated");

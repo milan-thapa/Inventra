@@ -41,7 +41,7 @@ export default function PersonalProfilePage() {
     setLoading(true);
     try {
       const res = await updatePersonalProfile(activeProfileId, form);
-      if (res.error) {
+      if ("error" in res && res.error) {
         toast({ variant: "destructive", title: "Error", description: res.error });
       } else {
         toast({ title: "Profile updated successfully" });

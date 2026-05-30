@@ -191,7 +191,7 @@ export default function EditSalesInvoicePage() {
     });
     setSaving(false);
 
-    if (res.error) toast.error(res.error);
+    if ("error" in res && res.error) toast.error(res.error);
     else {
       toast.success("Sale invoice updated successfully");
       router.push("/sales");

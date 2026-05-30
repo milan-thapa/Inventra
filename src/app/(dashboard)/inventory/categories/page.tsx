@@ -51,7 +51,7 @@ export default function CategoriesPage() {
     const res = await createItemCategory(activeProfileId, newCategory.trim());
     setAdding(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Category added successfully");
@@ -64,7 +64,7 @@ export default function CategoriesPage() {
     if (!activeProfileId || !deleteId) return;
     
     const res = await deleteItemCategory(activeProfileId, deleteId);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Category deleted successfully");

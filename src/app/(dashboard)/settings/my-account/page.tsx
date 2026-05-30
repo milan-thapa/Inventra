@@ -23,7 +23,7 @@ export default function MyAccountPage() {
     setLoading(true);
     try {
       const res = await updateUserAccount({ name, phone });
-      if (res.error) {
+      if ("error" in res && res.error) {
         toast({ variant: "destructive", title: "Error", description: res.error });
       } else {
         toast({ title: "Account updated successfully" });

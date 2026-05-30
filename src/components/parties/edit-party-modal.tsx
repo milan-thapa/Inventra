@@ -81,7 +81,7 @@ export function EditPartyModal({
 
         setLoading(false);
 
-        if (res.error) {
+        if ("error" in res && res.error) {
             setError(res.error);
             toast({ variant: "destructive", title: "Error", description: res.error });
         } else {

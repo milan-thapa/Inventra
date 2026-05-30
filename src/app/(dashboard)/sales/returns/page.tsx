@@ -53,7 +53,7 @@ export default function SalesReturnsPage() {
   const handleDelete = async () => {
     if (!activeProfileId || !deleteId) return;
     const res = await deleteSalesReturn(activeProfileId, deleteId);
-    if (res.error) toast.error(res.error);
+    if ("error" in res && res.error) toast.error(res.error);
     else {
       toast.success("Sales return deleted successfully");
       loadReturns();
@@ -66,7 +66,7 @@ export default function SalesReturnsPage() {
     const res = await updateSalesReturn(activeProfileId, returnId, {
       status: "COMPLETED",
     });
-    if (res.error) toast.error(res.error);
+    if ("error" in res && res.error) toast.error(res.error);
     else {
       toast.success("Sales return approved and inventory updated");
       loadReturns();

@@ -144,7 +144,7 @@ export default function CreateSalesReturnPage() {
     });
     setLoading(false);
 
-    if (res.error) return toast.error(res.error);
+    if ("error" in res && res.error) return toast.error(res.error);
     toast.success("Sales return created successfully");
     router.push("/sales");
   }

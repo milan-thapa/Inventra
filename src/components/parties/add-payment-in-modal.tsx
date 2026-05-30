@@ -65,7 +65,7 @@ export function AddPaymentInModal({
     const res = await addPaymentIn(profileId, data);
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
     } else {
       toast({ title: "Payment In saved successfully" });
@@ -249,7 +249,7 @@ export function AddPaymentOutModal({
     const res = await addPaymentOut(profileId, data);
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
     } else {
       toast({ title: "Payment Out saved successfully" });

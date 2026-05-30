@@ -89,7 +89,7 @@ export default function GeneralSettingsPage() {
         privacyMode,
         appLock,
       });
-      if (res.error) {
+      if ("error" in res && res.error) {
         toast({ variant: "destructive", title: "Error", description: res.error });
       } else {
         // Update local store to sync other components (like Header)

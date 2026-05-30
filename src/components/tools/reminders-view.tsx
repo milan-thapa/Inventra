@@ -95,7 +95,7 @@ export function RemindersView({
 
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
     } else {
       if (res.data) setUpcoming((prev) => [res.data!, ...prev]);
@@ -128,7 +128,7 @@ export function RemindersView({
     }
 
     const res = await toggleReminder(profileId, id);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
       // Revert if error
       if (isCurrentlyCompleted) {

@@ -56,7 +56,7 @@ export default function PurchaseReturnsPage() {
     if (!activeProfileId || !deleteId) return;
     
     const res = await deletePurchaseReturn(activeProfileId, deleteId);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Purchase return deleted successfully");
@@ -71,7 +71,7 @@ export default function PurchaseReturnsPage() {
     const res = await updatePurchaseReturn(activeProfileId, returnId, {
       status: "COMPLETED",
     });
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Purchase return approved and inventory updated");

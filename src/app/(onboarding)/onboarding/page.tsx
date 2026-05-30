@@ -52,7 +52,7 @@ export default function OnboardingPage() {
 
       console.log("[Onboarding] Profile creation response:", res);
 
-      if (res.error) {
+      if ("error" in res && res.error) {
         toast({ variant: "destructive", title: res.error });
       } else {
         toast({ title: "Profile created!", description: `Welcome to ${APP_NAME}` });

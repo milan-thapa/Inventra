@@ -186,7 +186,7 @@ export default function AddItemPage() {
     });
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Item added successfully");

@@ -54,7 +54,7 @@ export function CategoryManager({
 
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
     } else {
       if (res.data) {

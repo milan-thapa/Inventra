@@ -31,7 +31,7 @@ export default function TaxSettingsPage() {
         taxType,
         taxNumber,
       });
-      if (res.error) {
+      if ("error" in res && res.error) {
         toast.error(res.error);
       } else {
         toast.success("Tax settings saved successfully");

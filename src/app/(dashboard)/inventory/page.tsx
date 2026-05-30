@@ -103,7 +103,7 @@ function AdjustStockModal({
       adjustedDate: date,
     });
     setLoading(false);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success(
@@ -619,7 +619,7 @@ export default function InventoryPage() {
   const handleDelete = async () => {
     if (!activeProfileId || !deleteId) return;
     const res = await deleteItem(activeProfileId, deleteId);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else {
       toast.success("Item deleted");
@@ -633,7 +633,7 @@ export default function InventoryPage() {
   const handleExport = async () => {
     if (!activeProfileId) return;
     const res = await exportInventoryToCSV(activeProfileId);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else if (res.data) {
       const blob = new Blob([res.data], { type: "text/csv" });
@@ -657,7 +657,7 @@ export default function InventoryPage() {
     const res = await bulkUpdateBarcodes(activeProfileId, itemIds);
     setGeneratingBarcodes(false);
     
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else if (res.data) {
       toast.success(`Generated barcodes for ${res.data.success} items`);
@@ -692,7 +692,7 @@ export default function InventoryPage() {
     const text = await importFile.text();
     const res = await importInventoryFromCSV(activeProfileId, text);
     setImporting(false);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else if (res.data) {
       setImportResults(res.data);

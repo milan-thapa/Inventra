@@ -63,7 +63,7 @@ export function BarcodeScanner({ open, onClose, onScanSuccess }: BarcodeScannerP
     setSearching(true);
     const res = await findItemByBarcode(activeProfileId, manualBarcode.trim());
     setSearching(false);
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast.error(res.error);
     } else if (res.data) {
       onScanSuccess(res.data);

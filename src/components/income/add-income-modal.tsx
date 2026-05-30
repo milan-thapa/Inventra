@@ -59,7 +59,7 @@ export function AddIncomeModal({
 
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
     } else {
       toast({ title: "Income Added Successfully" });

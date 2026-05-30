@@ -71,7 +71,7 @@ export function AddExpenseModal({
 
     setLoading(false);
 
-    if (res.error) {
+    if ("error" in res && res.error) {
       toast({ variant: "destructive", title: "Error", description: res.error });
     } else {
       toast({ title: "Expense Added Successfully" });
