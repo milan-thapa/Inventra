@@ -53,7 +53,7 @@ export default function QuotationsPage() {
   const handleDelete = async () => {
     if (!activeProfileId || !deleteId) return;
     const res = await deleteQuotation(activeProfileId, deleteId);
-    if (res.error) toast.error(res.error);
+    if ("error" in res && res.error) toast.error(res.error);
     else {
       toast.success("Quotation deleted successfully");
       loadQuotations();
@@ -68,7 +68,7 @@ export default function QuotationsPage() {
       status: "COMPLETED",
       date: new Date(),
     });
-    if (res.error) toast.error(res.error);
+    if ("error" in res && res.error) toast.error(res.error);
     else {
       toast.success("Quotation converted to sale successfully");
       loadQuotations();
