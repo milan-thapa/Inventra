@@ -298,7 +298,7 @@ export default function InventoryReportPage() {
           </>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500">No data available</p>
+            <p className="text-muted-foreground">No data available</p>
           </div>
         )}
       </div>

@@ -200,14 +200,14 @@ export default function EditSalesInvoicePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-border">
         <div className="flex items-center gap-2">
@@ -309,7 +309,7 @@ export default function EditSalesInvoicePage() {
                           placeholder="Enter Item name"
                           value={item.name}
                           onChange={(e) => updateLineItem(index, "name", e.target.value)}
-                          className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-emerald-500 bg-transparent"
+                          className="h-7 text-xs border-transparent hover:border-border focus:border-emerald-500 bg-transparent"
                         />
                       )}
                     </td>
@@ -374,7 +374,7 @@ export default function EditSalesInvoicePage() {
             </tbody>
           </table>
 
-          <div className="flex items-center justify-between px-2.5 py-2 bg-white">
+          <div className="flex items-center justify-between px-2.5 py-2 bg-background">
             <button
               type="button"
               onClick={addLineItem}

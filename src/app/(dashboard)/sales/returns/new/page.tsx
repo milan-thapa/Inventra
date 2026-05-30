@@ -150,7 +150,7 @@ export default function CreateSalesReturnPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <style jsx global>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button {
@@ -266,7 +266,7 @@ export default function CreateSalesReturnPage() {
                         placeholder="Enter Item name"
                         value={item.name}
                         onChange={(e) => updateLineItem(index, "name", e.target.value)}
-                        className="h-9 text-sm border-gray-200 bg-white shadow-sm"
+                        className="h-9 text-sm border-border bg-background shadow-sm"
                       />
                     )}
                   </td>
@@ -321,7 +321,7 @@ export default function CreateSalesReturnPage() {
           </table>
 
           {/* Add Item row + Subtotal */}
-          <div className="flex items-center justify-between px-3 py-3 bg-gray-50 border-t border-gray-200">
+          <div className="flex items-center justify-between px-3 py-3 bg-muted border-t border-border">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -482,7 +482,7 @@ export default function CreateSalesReturnPage() {
       </div>
 
       {/* ── Footer ── */}
-      <div className="flex items-center justify-end gap-2.5 px-5 py-3 border-t border-gray-200">
+      <div className="flex items-center justify-end gap-2.5 px-5 py-3 border-t border-border">
         <Button
           type="button"
           variant="outline"

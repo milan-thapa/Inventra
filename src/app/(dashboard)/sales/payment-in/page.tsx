@@ -83,12 +83,12 @@ export default function PaymentInPage() {
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center">
         <div className="mb-6">
           <div className="w-32 h-32 mx-auto relative">
-            <div className="w-24 h-28 bg-gray-100 rounded-lg mx-auto flex flex-col items-center justify-center border border-gray-200 relative">
-              <div className="w-14 h-2 bg-gray-300 rounded mb-2" />
-              <div className="w-10 h-2 bg-gray-200 rounded mb-1" />
-              <div className="w-12 h-2 bg-gray-200 rounded mb-1" />
-              <div className="w-8 h-2 bg-gray-200 rounded" />
-              <div className="absolute top-0 left-0 right-0 h-6 bg-gray-300 rounded-t-lg" />
+            <div className="w-24 h-28 bg-muted rounded-lg mx-auto flex flex-col items-center justify-center border border-border relative">
+              <div className="w-14 h-2 bg-muted-foreground/30 rounded mb-2" />
+              <div className="w-10 h-2 bg-muted-foreground/20 rounded mb-1" />
+              <div className="w-12 h-2 bg-muted-foreground/20 rounded mb-1" />
+              <div className="w-8 h-2 bg-muted-foreground/20 rounded" />
+              <div className="absolute top-0 left-0 right-0 h-6 bg-muted-foreground/30 rounded-t-lg" />
             </div>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function PaymentInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Page Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <h1 className="text-lg font-semibold text-foreground">
