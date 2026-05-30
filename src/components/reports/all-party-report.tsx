@@ -42,17 +42,14 @@ export function AllPartyReportView({
   const handlePrint = () => window.print();
 
   const handleDownloadExcel = async () => {
-    const { utils, writeFile } = await import("xlsx");
+    const { exportToExcel } = await import("@/lib/export");
     const data = filtered.map((p) => ({
       "Party Name": p.name,
       "Contact": p.phone ?? "—",
       "Receivable": p.balanceType === "TO_RECEIVE" ? Number(p.openingBalance) : 0,
       "Payable": p.balanceType === "TO_GIVE" ? Number(p.openingBalance) : 0,
     }));
-    const ws = utils.json_to_sheet(data);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, "All Party Report");
-    writeFile(wb, "all-party-report.xlsx");
+    await exportToExcel(data, "all-party-report", "All Party Report");
   };
 
   return (

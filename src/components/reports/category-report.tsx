@@ -30,16 +30,13 @@ export function CategoryReportView({
   const isExpense = type === "expense";
 
   const handleDownloadExcel = async () => {
-    const { utils, writeFile } = await import("xlsx");
+    const { exportToExcel } = await import("@/lib/export");
     const sheetData = data.map((r) => ({
       Category: r.name,
       "Total Transactions": r.totalTransactions,
       "Total Amount": r.totalAmount,
     }));
-    const ws = utils.json_to_sheet(sheetData);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, title);
-    writeFile(wb, `${type}-category-report.xlsx`);
+    await exportToExcel(sheetData, `${type}-category-report`, title);
   };
 
   return (

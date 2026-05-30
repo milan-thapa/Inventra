@@ -33,7 +33,7 @@ export function CashStatementView({
   const router = useRouter();
 
   const handleDownloadExcel = async () => {
-    const { utils, writeFile } = await import("xlsx");
+    const { exportToExcel } = await import("@/lib/export");
     const data = rows.map((r) => ({
       Date: formatDate(new Date(r.date)),
       Particular: r.type,
@@ -42,10 +42,7 @@ export function CashStatementView({
       "Money Out": r.moneyOut || "",
       Balance: r.balance,
     }));
-    const ws = utils.json_to_sheet(data);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, "Cash Statement");
-    writeFile(wb, "cash-in-hand-statement.xlsx");
+    await exportToExcel(data, "cash-in-hand-statement", "Cash Statement");
   };
 
   return (

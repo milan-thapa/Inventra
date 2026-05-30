@@ -50,17 +50,14 @@ export function TransactionReportView({
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const handleDownloadExcel = async () => {
-    const { utils, writeFile } = await import("xlsx");
+    const { exportToExcel } = await import("@/lib/export");
     const data = filtered.map((t) => ({
       Date: formatDate(new Date(t.date)),
       Type: TYPE_LABELS[t.type]?.label ?? t.type,
       Description: t.description ?? "—",
       Amount: Number(t.amount),
     }));
-    const ws = utils.json_to_sheet(data);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, "Transactions");
-    writeFile(wb, "transaction-report.xlsx");
+    await exportToExcel(data, "transaction-report", "Transactions");
   };
 
   return (
