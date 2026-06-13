@@ -1,14 +1,8 @@
 // src/lib/actions/reports.ts
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
-}
+import { verifyProfile, buildCategoryReport } from "@/lib/actions/shared";
 
 // ── All Party Report ──────────────────────────────────────
 export async function getAllPartyReport(
@@ -98,77 +92,16 @@ export async function getCashInHandStatement(
 export async function getExpenseCategoryReport(
   profileId: string,
   dateFrom?: Date,
-  dateTo?: Date
+  dateTo?: Date,
 ) {
-  const profile = await verifyProfile(profileId);
-  if (!profile) return { error: "Unauthorized" };
-
-  const from = dateFrom ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const to = dateTo ?? new Date();
-
-  try {
-    const categories = await db.expenseCategory.findMany({
-      where: { profileId },
-      include: {
-        expenses: {
-          where: { date: { gte: from, lte: to } },
-          select: { totalAmount: true },
-        },
-        _count: { select: { expenses: true } },
-      },
-      orderBy: { name: "asc" },
-    });
-
-    const report = categories.map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      totalTransactions: cat.expenses.length,
-      totalAmount: cat.expenses.reduce((sum, e) => sum + Number(e.totalAmount), 0),
-    }));
-
-    const grandTotal = report.reduce((sum, r) => sum + r.totalAmount, 0);
-
-    return { data: report, grandTotal, from, to };
-  } catch {
-    return { error: "Failed to generate report" };
-  }
+  return buildCategoryReport(profileId, "expenseCategory", "expenses", dateFrom, dateTo);
 }
 
 // ── Income Category Report ────────────────────────────────
 export async function getIncomeCategoryReport(
   profileId: string,
   dateFrom?: Date,
-  dateTo?: Date
+  dateTo?: Date,
 ) {
-  const profile = await verifyProfile(profileId);
-  if (!profile) return { error: "Unauthorized" };
-
-  const from = dateFrom ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const to = dateTo ?? new Date();
-
-  try {
-    const categories = await db.incomeCategory.findMany({
-      where: { profileId },
-      include: {
-        incomes: {
-          where: { date: { gte: from, lte: to } },
-          select: { totalAmount: true },
-        },
-      },
-      orderBy: { name: "asc" },
-    });
-
-    const report = categories.map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      totalTransactions: cat.incomes.length,
-      totalAmount: cat.incomes.reduce((sum, e) => sum + Number(e.totalAmount), 0),
-    }));
-
-    const grandTotal = report.reduce((sum, r) => sum + r.totalAmount, 0);
-
-    return { data: report, grandTotal, from, to };
-  } catch {
-    return { error: "Failed to generate report" };
-  }
+  return buildCategoryReport(profileId, "incomeCategory", "incomes", dateFrom, dateTo);
 }

@@ -1,16 +1,11 @@
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, BalanceType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
-
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
-}
+import { verifyProfile } from "@/lib/actions/shared";
+import { serializeInvoiceDecimals, serializeLineItems } from "@/lib/shared-utils";
 
 export async function getPurchases(profileId: string) {
   const profile = await verifyProfile(profileId);
@@ -26,18 +21,9 @@ export async function getPurchases(profileId: string) {
       orderBy: { date: "desc" },
     });
     
-    // Convert Decimal to number
     const serializedPurchases = purchases.map(purchase => ({
-      ...purchase,
-      totalAmount: Number(purchase.totalAmount),
-      discount: Number(purchase.discount),
-      tax: Number(purchase.tax),
-      grandTotal: Number(purchase.grandTotal),
-      items: purchase.items.map(item => ({
-        ...item,
-        rate: Number(item.rate),
-        amount: Number(item.amount)
-      }))
+      ...serializeInvoiceDecimals(purchase),
+      items: serializeLineItems(purchase.items),
     }));
 
     return { data: serializedPurchases };
@@ -179,15 +165,7 @@ export async function createPurchase(
     revalidatePath("/inventory");
     revalidatePath("/parties");
     if (data.partyId) revalidatePath(`/parties/${data.partyId}`);
-    return { 
-      data: {
-        ...result,
-        totalAmount: Number(result.totalAmount),
-        discount: Number(result.discount),
-        tax: Number(result.tax),
-        grandTotal: Number(result.grandTotal),
-      } 
-    };
+    return { data: serializeInvoiceDecimals(result) };
   } catch (e) {
     console.error("[createPurchase]", e);
     return { error: "Failed to create purchase" };

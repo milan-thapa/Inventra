@@ -2,9 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, SortAsc, Pencil, Trash2, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TransactionTableFilters } from "@/components/shared/transaction-table-filters";
 import { AddExpenseModal } from "@/components/expense/add-expense-modal";
 import { deleteExpense } from "@/lib/actions/expense";
 import { useToast } from "@/hooks/use-toast";
@@ -88,54 +88,16 @@ export function ExpenseTable({
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        {/* Search */}
-        <div className="relative flex-1 min-w-48 max-w-64">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search Expense..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-sm bg-muted/30 border-border/50"
-          />
-        </div>
-
-        {/* Category filter */}
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="h-8 px-2.5 bg-muted/30 border border-border/50 rounded-md text-sm text-foreground appearance-none focus:border-emerald-500 outline-none"
-        >
-          <option value="ALL">All Category</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
-          ))}
-        </select>
-
-        {/* Payment mode filter */}
-        <select
-          value={paymentFilter}
-          onChange={(e) => setPaymentFilter(e.target.value)}
-          className="h-8 px-2.5 bg-muted/30 border border-border/50 rounded-md text-sm text-foreground appearance-none focus:border-emerald-500 outline-none"
-        >
-          <option value="ALL">All Payment Modes</option>
-          <option value="CASH">Cash</option>
-          <option value="BANK">Bank</option>
-        </select>
-
-        {/* Date filter */}
-        <div className="flex items-center gap-1.5 h-8 px-2.5 bg-muted/30 border border-border/50 rounded-md text-sm text-muted-foreground cursor-pointer hover:border-emerald-500 transition-colors">
-          <Filter className="w-3 h-3" />
-          <span>All Date</span>
-        </div>
-
-        {/* Sort */}
-        <button className="flex items-center gap-1.5 h-8 px-2.5 bg-muted/30 border border-border/50 rounded-md text-sm text-muted-foreground hover:border-emerald-500 transition-colors ml-auto">
-          <SortAsc className="w-3 h-3" />
-          Sort By
-        </button>
-      </div>
+      <TransactionTableFilters
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search Expense..."
+        categories={categories}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        paymentFilter={paymentFilter}
+        onPaymentFilterChange={setPaymentFilter}
+      />
 
       {/* Table */}
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">

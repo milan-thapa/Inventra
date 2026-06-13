@@ -1,16 +1,10 @@
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
-
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
-}
+import { verifyProfile } from "@/lib/actions/shared";
 
 export async function getSalesReturns(profileId: string) {
   const profile = await verifyProfile(profileId);

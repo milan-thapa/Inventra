@@ -1,16 +1,10 @@
 // src/lib/actions/dashboard.ts
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { startOfDay, endOfDay, subDays, eachDayOfInterval, format } from "date-fns";
 import { createNotification } from "./notification";
-
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
-}
+import { verifyProfile } from "@/lib/actions/shared";
 
 // ── Dashboard stats ───────────────────────────────────────
 export async function getDashboardStats(profileId: string) {

@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { verifyProfile } from "@/lib/actions/shared";
 
 export async function getQuotations(profileId: string) {
   try {
@@ -73,12 +73,10 @@ export async function createQuotation(profileId: string, data: {
   validUntil?: Date;
   date: Date;
 }) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
+  try {
     // Get next quotation number
     const nextQuotationNo = await getNextQuotationNo(profileId);
     if (nextQuotationNo.error) {
@@ -147,12 +145,10 @@ export async function updateQuotation(
     status?: string;
   }
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
+  try {
     // Update quotation with items in a transaction
     const quotation = await db.$transaction(async (tx) => {
       // Delete existing items
@@ -205,12 +201,10 @@ export async function updateQuotation(
 }
 
 export async function deleteQuotation(id: string, profileId: string) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
+  try {
     // Check if quotation exists and can be deleted
     const quotation = await db.quotation.findFirst({
       where: { id, profileId },
@@ -249,12 +243,10 @@ export async function convertQuotationToSale(
     date: Date;
   }
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
+  try {
     // Get quotation details
     const quotation = await getQuotation(quotationId, profileId);
     if (quotation.error || !quotation.data) {

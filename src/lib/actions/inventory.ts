@@ -1,15 +1,9 @@
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
-
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
-}
+import { verifyProfile } from "@/lib/actions/shared";
 
 export async function getItems(profileId: string, options: { page?: number; limit?: number } = {}) {
   const profile = await verifyProfile(profileId);
@@ -274,9 +268,6 @@ export async function adjustStock(
     adjustedDate: string;
   }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
-
   const profile = await verifyProfile(profileId);
   if (!profile) return { error: "Unauthorized" };
 
@@ -318,7 +309,7 @@ export async function adjustStock(
           previousQty,
           newQty,
           reason: data.remarks,
-          userId: session.user.id,
+          userId: profile.userId,
           createdAt: new Date(data.adjustedDate)
         }
       })
