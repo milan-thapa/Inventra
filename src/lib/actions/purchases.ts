@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, BalanceType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
-import { verifyProfile, serializeInvoiceDecimals, serializeLineItems } from "@/lib/actions/shared";
+import { verifyProfile } from "@/lib/actions/shared";
+import { serializeInvoiceDecimals, serializeLineItems } from "@/lib/shared-utils";
 
 export async function getPurchases(profileId: string) {
   const profile = await verifyProfile(profileId);

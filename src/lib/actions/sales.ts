@@ -9,7 +9,8 @@ import { logger } from "@/lib/logger";
 import { withRateLimit } from "@/lib/ratelimit";
 import { withErrorHandler, UnauthorizedError, ValidationError } from "@/lib/error-handler";
 import { createSaleSchema, recordPaymentSchema } from "@/lib/validations/sales";
-import { verifyProfile, computePaymentStatus, serializeInvoiceDecimals, serializeLineItems } from "@/lib/actions/shared";
+import { verifyProfile } from "@/lib/actions/shared";
+import { computePaymentStatus, serializeInvoiceDecimals, serializeLineItems } from "@/lib/shared-utils";
 
 function serializeSaleRecord(sale: {
   payments: { amount: unknown }[];
