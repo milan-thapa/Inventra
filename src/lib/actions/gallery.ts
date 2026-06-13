@@ -1,13 +1,13 @@
 // src/lib/actions/gallery.ts
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { verifyProfile } from "@/lib/actions/shared";
 
 export async function getBillImages(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     const images = await db.billImage.findMany({
@@ -26,8 +26,8 @@ export async function createBillImage(
   url: string,
   fileName?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     const image = await db.billImage.create({
@@ -46,8 +46,8 @@ export async function createBillImage(
 }
 
 export async function deleteBillImage(profileId: string, imageId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     await db.billImage.delete({

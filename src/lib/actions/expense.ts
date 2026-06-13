@@ -1,18 +1,12 @@
 // src/lib/actions/expense.ts
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import type { CreateExpenseInput } from "@/lib/validations/expense";
-
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
-}
+import { verifyProfile, getNextSequenceNumber } from "@/lib/actions/shared";
 
 // ── Get expenses ──────────────────────────────────────────
 export async function getExpenses(
@@ -75,11 +69,7 @@ export async function createExpense(profileId: string, input: CreateExpenseInput
   if (!profile) return { error: "Unauthorized" };
 
   try {
-    const lastExpense = await db.expense.findFirst({
-      where: { profileId },
-      orderBy: { expenseNo: "desc" },
-    });
-    const expenseNo = (lastExpense?.expenseNo ?? 0) + 1;
+    const expenseNo = await getNextSequenceNumber("expense", "profileId", profileId, "expenseNo");
 
     const expense = await db.$transaction(async (tx) => {
       const newExpense = await tx.expense.create({
@@ -289,11 +279,7 @@ export async function createIncome(profileId: string, input: CreateExpenseInput)
   if (!profile) return { error: "Unauthorized" };
 
   try {
-    const lastIncome = await db.income.findFirst({
-      where: { profileId },
-      orderBy: { incomeNo: "desc" },
-    });
-    const incomeNo = (lastIncome?.incomeNo ?? 0) + 1;
+    const incomeNo = await getNextSequenceNumber("income", "profileId", profileId, "incomeNo");
 
     const income = await db.$transaction(async (tx) => {
       const newIncome = await tx.income.create({

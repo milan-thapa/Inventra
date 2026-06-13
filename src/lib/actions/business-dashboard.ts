@@ -1,14 +1,8 @@
 "use server";
 
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { startOfDay, endOfDay, subDays } from "date-fns";
-
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
-}
+import { verifyProfile } from "@/lib/actions/shared";
 
 export async function getBusinessDashboardStats(profileId: string) {
   const profile = await verifyProfile(profileId);

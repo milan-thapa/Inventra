@@ -9,11 +9,43 @@ import { logger } from "@/lib/logger";
 import { withRateLimit } from "@/lib/ratelimit";
 import { withErrorHandler, UnauthorizedError, ValidationError } from "@/lib/error-handler";
 import { createSaleSchema, recordPaymentSchema } from "@/lib/validations/sales";
+import { verifyProfile, computePaymentStatus, serializeInvoiceDecimals, serializeLineItems } from "@/lib/actions/shared";
 
-async function verifyProfile(profileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
+function serializeSaleRecord(sale: {
+  payments: { amount: unknown }[];
+  grandTotal: unknown;
+  receivedAmount: unknown;
+  status: string;
+  party: { openingBalance: unknown } | null;
+  items: { rate: unknown; amount: unknown }[];
+  totalAmount: unknown;
+  discount: unknown;
+  tax: unknown;
+  [key: string]: unknown;
+}) {
+  const totalReceived = sale.payments.reduce(
+    (sum, payment) => sum + Number(payment.amount),
+    0,
+  );
+  const grandTotal = Number(sale.grandTotal);
+  const remainingAmount = grandTotal - totalReceived;
+  const status =
+    sale.payments.length > 0
+      ? computePaymentStatus(totalReceived, grandTotal)
+      : sale.status;
+
+  return {
+    ...serializeInvoiceDecimals(sale as any),
+    receivedAmount: Number(sale.receivedAmount || 0),
+    totalReceived,
+    remainingAmount,
+    status,
+    party: sale.party
+      ? { ...sale.party, openingBalance: Number(sale.party.openingBalance) }
+      : null,
+    items: serializeLineItems(sale.items as any),
+    payments: sale.payments.map((p) => ({ ...p, amount: Number(p.amount) })),
+  };
 }
 
 export async function getSale(profileId: string, saleId: string) {
@@ -32,46 +64,7 @@ export async function getSale(profileId: string, saleId: string) {
 
     if (!sale) return { error: "Sale not found" };
 
-    const totalReceived = sale.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
-    const remainingAmount = Number(sale.grandTotal) - totalReceived;
-
-    let status = sale.status;
-    if (sale.payments.length > 0) {
-      if (totalReceived >= Number(sale.grandTotal)) {
-        status = "PAID";
-      } else if (totalReceived > 0) {
-        status = "PARTIAL";
-      } else {
-        status = "UNPAID";
-      }
-    }
-
-    return {
-      data: {
-        ...sale,
-        totalAmount: Number(sale.totalAmount),
-        discount: Number(sale.discount),
-        tax: Number(sale.tax),
-        grandTotal: Number(sale.grandTotal),
-        receivedAmount: Number(sale.receivedAmount || 0),
-        totalReceived,
-        remainingAmount,
-        status,
-        party: sale.party ? {
-          ...sale.party,
-          openingBalance: Number(sale.party.openingBalance)
-        } : null,
-        items: sale.items.map(item => ({
-          ...item,
-          rate: Number(item.rate),
-          amount: Number(item.amount)
-        })),
-        payments: sale.payments.map(payment => ({
-          ...payment,
-          amount: Number(payment.amount)
-        }))
-      }
-    };
+    return { data: serializeSaleRecord(sale) };
   } catch (e) {
     console.error("[getSale]", e);
     return { error: "Failed to fetch sale" };
@@ -93,51 +86,7 @@ export async function getSales(profileId: string) {
       orderBy: { date: "desc" },
     });
 
-    // Convert Decimal to number
-    const serializedSales = sales.map(sale => {
-      const totalReceived = sale.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
-      const remainingAmount = Number(sale.grandTotal) - totalReceived;
-      
-      // Determine status based on payments only if there are payment records
-      // Otherwise use the existing status from database
-      let status = sale.status;
-      if (sale.payments.length > 0) {
-        if (totalReceived >= Number(sale.grandTotal)) {
-          status = "PAID";
-        } else if (totalReceived > 0) {
-          status = "PARTIAL";
-        } else {
-          status = "UNPAID";
-        }
-      }
-
-      return {
-        ...sale,
-        totalAmount: Number(sale.totalAmount),
-        discount: Number(sale.discount),
-        tax: Number(sale.tax),
-        grandTotal: Number(sale.grandTotal),
-        receivedAmount: Number(sale.receivedAmount || 0),
-        totalReceived,
-        remainingAmount,
-        status,
-        party: sale.party ? {
-          ...sale.party,
-          openingBalance: Number(sale.party.openingBalance)
-        } : null,
-        items: sale.items.map(item => ({
-          ...item,
-          rate: Number(item.rate),
-          amount: Number(item.amount)
-        })),
-        payments: sale.payments.map(payment => ({
-          ...payment,
-          amount: Number(payment.amount)
-        }))
-      };
-    });
-
-    return { data: serializedSales };
+    return { data: sales.map(serializeSaleRecord) };
   } catch (e) {
     console.error("[getSales]", e);
     return { error: "Failed to fetch sales" };
@@ -350,15 +299,7 @@ export async function createSale(
 
     revalidatePath("/sales");
     revalidatePath("/dashboard");
-    return {
-      data: {
-        ...result,
-        totalAmount: Number(result.totalAmount),
-        discount: Number(result.discount),
-        tax: Number(result.tax),
-        grandTotal: Number(result.grandTotal),
-      }
-    };
+    return { data: serializeInvoiceDecimals(result) };
   }, "createSale");
 }
 
@@ -411,8 +352,7 @@ export async function recordPayment(
         where: { id: saleId },
         data: {
           receivedAmount: totalReceived,
-          status: totalReceived >= Number(sale.grandTotal) ? "PAID" : 
-                 totalReceived > 0 ? "PARTIAL" : "UNPAID",
+          status: computePaymentStatus(totalReceived, Number(sale.grandTotal)),
         },
       });
 
@@ -490,8 +430,7 @@ export async function deletePayment(profileId: string, paymentId: string) {
           where: { id: payment.saleId },
           data: {
             receivedAmount: totalReceived,
-            status: totalReceived >= Number(payment.sale.grandTotal) ? "PAID" : 
-                   totalReceived > 0 ? "PARTIAL" : "UNPAID",
+            status: computePaymentStatus(totalReceived, Number(payment.sale.grandTotal)),
           },
         });
       }
@@ -764,15 +703,7 @@ export async function updateSale(
     revalidatePath("/dashboard");
     revalidatePath("/parties");
 
-    return {
-      data: {
-        ...result,
-        totalAmount: Number(result.totalAmount),
-        discount: Number(result.discount),
-        tax: Number(result.tax),
-        grandTotal: Number(result.grandTotal),
-      }
-    };
+    return { data: serializeInvoiceDecimals(result) };
   }, "updateSale");
 }
 
