@@ -13,8 +13,7 @@ export const ourFileRouter = {
       return { userId: session.user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("[UploadThing] Bill image uploaded by:", metadata.userId);
-      console.log("[UploadThing] File URL:", file.url);
+
       return { url: file.url };
     }),
 
@@ -26,7 +25,7 @@ export const ourFileRouter = {
       return { userId: session.user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("[UploadThing] Party photo uploaded by:", metadata.userId);
+
       return { url: file.url };
     }),
 
@@ -38,7 +37,7 @@ export const ourFileRouter = {
       return { userId: session.user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("[UploadThing] Profile logo uploaded by:", metadata.userId);
+
       return { url: file.url };
     }),
 } satisfies FileRouter;

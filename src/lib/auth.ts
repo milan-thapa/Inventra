@@ -53,11 +53,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return `${baseUrl}/dashboard`;
     },
   },
-  events: {
-    async signIn({ user, isNewUser }) {
-      if (isNewUser) {
-        console.log(`[Auth] New user registered: ${user.email}`);
-      }
-    },
-  },
+  events: {},
 });

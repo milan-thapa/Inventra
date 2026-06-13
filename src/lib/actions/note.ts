@@ -5,9 +5,15 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-export async function getNotes(profileId: string) {
+async function verifyProfile(profileId: string) {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  if (!session?.user?.id) return null;
+  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
+}
+
+export async function getNotes(profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     const notes = await db.note.findMany({
@@ -22,8 +28,8 @@ export async function getNotes(profileId: string) {
 }
 
 export async function getNote(profileId: string, noteId: string) {
-    const session = await auth();
-    if (!session?.user?.id) return { error: "Unauthorized" };
+    const profile = await verifyProfile(profileId);
+    if (!profile) return { error: "Unauthorized" };
 
     try {
         const note = await db.note.findFirst({
@@ -42,8 +48,8 @@ export async function createNote(
   title: string,
   body: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     const note = await db.note.create({
@@ -67,8 +73,8 @@ export async function updateNote(
     title: string,
     body: string
 ) {
-    const session = await auth();
-    if (!session?.user?.id) return { error: "Unauthorized" };
+    const profile = await verifyProfile(profileId);
+    if (!profile) return { error: "Unauthorized" };
 
     try {
         const note = await db.note.update({
@@ -88,8 +94,8 @@ export async function updateNote(
 }
 
 export async function deleteNote(profileId: string, noteId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     await db.note.delete({

@@ -5,9 +5,15 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-export async function getBillImages(profileId: string) {
+async function verifyProfile(profileId: string) {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  if (!session?.user?.id) return null;
+  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
+}
+
+export async function getBillImages(profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     const images = await db.billImage.findMany({
@@ -26,8 +32,8 @@ export async function createBillImage(
   url: string,
   fileName?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     const image = await db.billImage.create({
@@ -46,8 +52,8 @@ export async function createBillImage(
 }
 
 export async function deleteBillImage(profileId: string, imageId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Unauthorized" };
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     await db.billImage.delete({

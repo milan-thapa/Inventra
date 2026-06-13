@@ -47,14 +47,20 @@ export default auth((req) => {
 
   let response = NextResponse.next();
 
-  // Allow public assets and API routes
+  // Allow public assets and specific API routes with their own auth
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/uploadthing") ||
+    pathname.startsWith("/api/stripe/webhook") ||
     pathname.includes(".")
   ) {
     return addSecurityHeaders(response);
+  }
+
+  // Protect API routes (except those whitelisted above)
+  if (pathname.startsWith("/api/") && !isLoggedIn) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));

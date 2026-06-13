@@ -400,14 +400,14 @@ export async function getFeatureSettings(profileId: string) {
 export async function hasProfiles(): Promise<boolean> {
   const session = await auth();
   if (!session?.user?.id) {
-    console.log("[hasProfiles] No session or user ID");
+
     return false;
   }
 
-  console.log("[hasProfiles] Checking profiles for user:", session.user.id);
+
   const count = await db.profile.count({
     where: { userId: session.user.id },
   });
-  console.log("[hasProfiles] Profile count:", count);
+
   return count > 0;
 }

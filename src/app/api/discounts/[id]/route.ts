@@ -3,6 +3,15 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
+async function verifyDiscountOwnership(discountId: string, userId: string) {
+  const discount = await db.discount.findFirst({
+    where: { id: discountId },
+    include: { profile: { select: { userId: true } } },
+  });
+  if (!discount || discount.profile.userId !== userId) return null;
+  return discount;
+}
+
 // PUT - Update a discount
 export async function PUT(
   request: NextRequest,
@@ -14,8 +23,13 @@ export async function PUT(
   }
 
   try {
+    const owned = await verifyDiscountOwnership(params.id, session.user.id);
+    if (!owned) {
+      return NextResponse.json({ error: "Discount not found" }, { status: 404 });
+    }
+
     const body = await request.json();
-    const { profileId, name, type, value, startDate, endDate, isActive } = body;
+    const { name, type, value, startDate, endDate, isActive } = body;
 
     const discount = await db.discount.update({
       where: { id: params.id },
@@ -48,6 +62,11 @@ export async function DELETE(
   }
 
   try {
+    const owned = await verifyDiscountOwnership(params.id, session.user.id);
+    if (!owned) {
+      return NextResponse.json({ error: "Discount not found" }, { status: 404 });
+    }
+
     await db.discount.delete({
       where: { id: params.id },
     });
