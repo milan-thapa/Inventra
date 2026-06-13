@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, BalanceType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -42,7 +43,7 @@ export async function getPurchases(profileId: string) {
 
     return { data: serializedPurchases };
   } catch (e) {
-    console.error("[getPurchases]", e);
+    logger.error("Failed to fetch purchases", e, { profileId });
     return { error: "Failed to fetch purchases" };
   }
 }
@@ -189,7 +190,7 @@ export async function createPurchase(
       } 
     };
   } catch (e) {
-    console.error("[createPurchase]", e);
+    logger.error("Failed to create purchase", e, { profileId });
     return { error: "Failed to create purchase" };
   }
 }
@@ -402,7 +403,7 @@ export async function deletePurchase(profileId: string, purchaseId: string) {
     revalidatePath("/parties");
     return { success: true };
   } catch (e) {
-    console.error("[deletePurchase]", e);
+    logger.error("Failed to delete purchase", e, { profileId, purchaseId });
     return { error: "Failed to delete purchase" };
   }
 }

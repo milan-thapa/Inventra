@@ -73,7 +73,7 @@ export async function getSale(profileId: string, saleId: string) {
       }
     };
   } catch (e) {
-    console.error("[getSale]", e);
+    logger.error("Failed to fetch sale", e, { profileId, saleId });
     return { error: "Failed to fetch sale" };
   }
 }
@@ -139,7 +139,7 @@ export async function getSales(profileId: string) {
 
     return { data: serializedSales };
   } catch (e) {
-    console.error("[getSales]", e);
+    logger.error("Failed to fetch sales", e, { profileId });
     return { error: "Failed to fetch sales" };
   }
 }
@@ -156,7 +156,7 @@ export async function getNextInvoiceNo(profileId: string) {
     });
     return { data: (lastSale?.invoiceNo || 0) + 1 };
   } catch (e) {
-    console.error("[getNextInvoiceNo]", e);
+    logger.error("Failed to fetch next invoice number", e, { profileId });
     return { error: "Failed to fetch invoice number" };
   }
 }

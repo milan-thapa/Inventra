@@ -1,5 +1,6 @@
 // src/lib/db.ts
 import { PrismaClient } from "@prisma/client";
+import { logger } from "./logger";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -53,7 +54,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     await db.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
-    console.error("Database health check failed:", error);
+    logger.error("Database health check failed", error);
     return false;
   }
 }

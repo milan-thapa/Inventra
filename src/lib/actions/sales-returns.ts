@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -33,7 +34,7 @@ export async function getSalesReturns(profileId: string) {
 
     return { data: salesReturns };
   } catch (error) {
-    console.error("[getSalesReturns]", error);
+    logger.error("Failed to fetch sales returns", error, { profileId });
     return { error: "Failed to fetch sales returns" };
   }
 }
@@ -60,7 +61,7 @@ export async function getSalesReturn(profileId: string, returnId: string) {
 
     return { data: salesReturn };
   } catch (error) {
-    console.error("[getSalesReturn]", error);
+    logger.error("Failed to fetch sales return", error, { profileId, returnId });
     return { error: "Failed to fetch sales return" };
   }
 }
@@ -78,7 +79,7 @@ export async function getNextReturnNo(profileId: string) {
     const nextNo = lastReturn ? lastReturn.returnNo + 1 : 1;
     return { data: nextNo };
   } catch (error) {
-    console.error("[getNextReturnNo]", error);
+    logger.error("Failed to get next sales return number", error, { profileId });
     return { error: "Failed to get next return number" };
   }
 }
@@ -141,7 +142,7 @@ export async function createSalesReturn(
 
     return { data: result };
   } catch (error) {
-    console.error("[createSalesReturn]", error);
+    logger.error("Failed to create sales return", error, { profileId });
     return { error: "Failed to create sales return" };
   }
 }
@@ -255,7 +256,7 @@ export async function updateSalesReturn(
 
     return { data: result };
   } catch (error) {
-    console.error("[updateSalesReturn]", error);
+    logger.error("Failed to update sales return", error, { profileId, returnId });
     return { error: "Failed to update sales return" };
   }
 }
@@ -316,7 +317,7 @@ export async function deleteSalesReturn(profileId: string, returnId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("[deleteSalesReturn]", error);
+    logger.error("Failed to delete sales return", error, { profileId, returnId });
     return { error: "Failed to delete sales return" };
   }
 }

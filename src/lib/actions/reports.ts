@@ -3,6 +3,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -44,7 +45,8 @@ export async function getAllPartyReport(
       .reduce((sum, p) => sum + Number(p.openingBalance), 0);
 
     return { data: parties, totalReceivable, totalPayable };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to generate all party report", e, { profileId });
     return { error: "Failed to generate report" };
   }
 }
@@ -89,7 +91,8 @@ export async function getCashInHandStatement(
       to,
       profileName: profile.name,
     };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to generate cash in hand statement", e, { profileId });
     return { error: "Failed to generate statement" };
   }
 }
@@ -129,7 +132,8 @@ export async function getExpenseCategoryReport(
     const grandTotal = report.reduce((sum, r) => sum + r.totalAmount, 0);
 
     return { data: report, grandTotal, from, to };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to generate expense category report", e, { profileId });
     return { error: "Failed to generate report" };
   }
 }
@@ -168,7 +172,8 @@ export async function getIncomeCategoryReport(
     const grandTotal = report.reduce((sum, r) => sum + r.totalAmount, 0);
 
     return { data: report, grandTotal, from, to };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to generate income category report", e, { profileId });
     return { error: "Failed to generate report" };
   }
 }

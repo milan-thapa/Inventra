@@ -25,9 +25,7 @@ class Logger {
   }
 
   warn(message: string, context?: LogContext) {
-    if (this.isDevelopment) {
-      console.warn(this.formatMessage("warn", message, context));
-    }
+    console.warn(this.formatMessage("warn", message, context));
   }
 
   error(message: string, error?: Error | unknown, context?: LogContext) {

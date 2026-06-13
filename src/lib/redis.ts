@@ -1,5 +1,6 @@
 // src/lib/redis.ts
 import { Redis } from "@upstash/redis";
+import { logger } from "./logger";
 
 // Singleton Redis client for production
 const globalForRedis = globalThis as unknown as {
@@ -23,7 +24,7 @@ export async function checkRedisHealth(): Promise<boolean> {
     await redis.ping();
     return true;
   } catch (error) {
-    console.error("Redis health check failed:", error);
+    logger.error("Redis health check failed", error);
     return false;
   }
 }

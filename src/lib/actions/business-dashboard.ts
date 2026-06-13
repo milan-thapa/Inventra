@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { startOfDay, endOfDay, subDays } from "date-fns";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -70,7 +71,7 @@ export async function getBusinessDashboardStats(profileId: string) {
       },
     };
   } catch (e) {
-    console.error("[getBusinessDashboardStats]", e);
+    logger.error("Failed to fetch business dashboard stats", e, { profileId });
     return { error: "Failed to fetch stats" };
   }
 }
@@ -112,7 +113,7 @@ export async function getBusinessCashflow(profileId: string) {
 
     return { data: { chart: result, totalIn, totalOut } };
   } catch (e) {
-    console.error("[getBusinessCashflow]", e);
+    logger.error("Failed to fetch business cashflow", e, { profileId });
     return { error: "Failed to fetch cashflow" };
   }
 }
