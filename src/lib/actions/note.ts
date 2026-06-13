@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function getNotes(profileId: string) {
   const session = await auth();
@@ -16,7 +17,7 @@ export async function getNotes(profileId: string) {
     });
     return { data: notes };
   } catch (e) {
-    console.error("[getNotes]", e);
+    logger.error("Failed to fetch notes", e, { profileId });
     return { error: "Failed to fetch notes" };
   }
 }
@@ -32,7 +33,7 @@ export async function getNote(profileId: string, noteId: string) {
         if (!note) return { error: "Note not found" };
         return { data: note };
     } catch (e) {
-        console.error("[getNote]", e);
+        logger.error("Failed to fetch note", e, { profileId, noteId });
         return { error: "Failed to fetch note" };
     }
 }
@@ -56,7 +57,7 @@ export async function createNote(
     revalidatePath("/business-tools/notebook");
     return { data: note };
   } catch (e) {
-    console.error("[createNote]", e);
+    logger.error("Failed to create note", e, { profileId });
     return { error: "Failed to create note" };
   }
 }
@@ -82,7 +83,7 @@ export async function updateNote(
         revalidatePath("/business-tools/notebook");
         return { data: note };
     } catch (e) {
-        console.error("[updateNote]", e);
+        logger.error("Failed to update note", e, { profileId, noteId });
         return { error: "Failed to update note" };
     }
 }
@@ -98,7 +99,7 @@ export async function deleteNote(profileId: string, noteId: string) {
     revalidatePath("/business-tools/notebook");
     return { success: true };
   } catch (e) {
-    console.error("[deleteNote]", e);
+    logger.error("Failed to delete note", e, { profileId, noteId });
     return { error: "Failed to delete note" };
   }
 }

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { startOfDay, endOfDay, subDays, eachDayOfInterval, format } from "date-fns";
 import { createNotification } from "./notification";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -57,7 +58,7 @@ export async function getDashboardStats(profileId: string) {
       },
     };
   } catch (e) {
-    console.error("[getDashboardStats]", e);
+    logger.error("Failed to fetch dashboard stats", e, { profileId });
     return { error: "Failed to fetch stats" };
   }
 }
@@ -118,7 +119,7 @@ export async function getCashflow(profileId: string, period: "daily" | "weekly" 
 
     return { data: { chart: result, totalIn, totalOut } };
   } catch (e) {
-    console.error("[getCashflow]", e);
+    logger.error("Failed to fetch cashflow", e, { profileId, period });
     return { error: "Failed to fetch cashflow" };
   }
 }
@@ -135,7 +136,8 @@ export async function getRecentTransactions(profileId: string, limit = 5) {
       take: limit,
     });
     return { data: transactions };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch recent transactions", e, { profileId });
     return { error: "Failed to fetch transactions" };
   }
 }
@@ -157,7 +159,8 @@ export async function getAccounts(profileId: string) {
     );
 
     return { data: accounts, totalBalance };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch accounts", e, { profileId });
     return { error: "Failed to fetch accounts" };
   }
 }
@@ -187,7 +190,8 @@ export async function createAccount(
       },
     });
     return { data: account };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to create account", e, { profileId });
     return { error: "Failed to create account" };
   }
 }
@@ -202,7 +206,8 @@ export async function deleteAccount(profileId: string, accountId: string) {
       data: { isActive: false },
     });
     return { success: true };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to delete account", e, { profileId, accountId });
     return { error: "Failed to delete account" };
   }
 }
@@ -228,7 +233,8 @@ export async function getReminders(profileId: string, completed = false) {
       orderBy: { dueDate: "asc" },
     });
     return { data: reminders };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch reminders", e, { profileId });
     return { error: "Failed to fetch reminders" };
   }
 }
@@ -263,7 +269,8 @@ export async function createReminder(
     );
 
     return { data: reminder };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to create reminder", e, { profileId });
     return { error: "Failed to create reminder" };
   }
 }
@@ -281,7 +288,8 @@ export async function toggleReminder(profileId: string, reminderId: string) {
       data: { isCompleted: !reminder.isCompleted },
     });
     return { data: updated };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to toggle reminder", e, { profileId, reminderId });
     return { error: "Failed to update reminder" };
   }
 }
@@ -296,7 +304,8 @@ export async function markReminderCompleted(profileId: string, reminderId: strin
       data: { isCompleted: true },
     });
     return { data: updated };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to mark reminder as completed", e, { profileId, reminderId });
     return { error: "Failed to mark reminder as completed" };
   }
 }
@@ -308,7 +317,8 @@ export async function deleteReminder(profileId: string, reminderId: string) {
   try {
     await db.reminder.delete({ where: { id: reminderId } });
     return { success: true };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to delete reminder", e, { profileId, reminderId });
     return { error: "Failed to delete reminder" };
   }
 }

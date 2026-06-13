@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PartyTxType, TransactionType, PaymentMethod } from "@prisma/client";
 import { recalculatePartyBalance } from "./party";
+import { logger } from "@/lib/logger";
 
 async function verifyProfile(profileId: string) {
   const session = await auth();
@@ -33,7 +34,7 @@ export async function getPurchaseReturns(profileId: string) {
 
     return { data: purchaseReturns };
   } catch (error) {
-    console.error("[getPurchaseReturns]", error);
+    logger.error("Failed to fetch purchase returns", error, { profileId });
     return { error: "Failed to fetch purchase returns" };
   }
 }
@@ -60,7 +61,7 @@ export async function getPurchaseReturn(profileId: string, returnId: string) {
 
     return { data: purchaseReturn };
   } catch (error) {
-    console.error("[getPurchaseReturn]", error);
+    logger.error("Failed to fetch purchase return", error, { profileId, returnId });
     return { error: "Failed to fetch purchase return" };
   }
 }
@@ -78,7 +79,7 @@ export async function getNextReturnNo(profileId: string) {
     const nextReturnNo = (lastReturn?.returnNo || 0) + 1;
     return { data: nextReturnNo };
   } catch (error) {
-    console.error("[getNextReturnNo]", error);
+    logger.error("Failed to get next purchase return number", error, { profileId });
     return { error: "Failed to get next return number" };
   }
 }
@@ -142,7 +143,7 @@ export async function createPurchaseReturn(
 
     return { data: result };
   } catch (e) {
-    console.error("[createPurchaseReturn]", e);
+    logger.error("Failed to create purchase return", e, { profileId });
     return { error: "Failed to create purchase return" };
   }
 }
@@ -256,7 +257,7 @@ export async function updatePurchaseReturn(
 
     return { data: result };
   } catch (e) {
-    console.error("[updatePurchaseReturn]", e);
+    logger.error("Failed to update purchase return", e, { profileId, returnId });
     return { error: "Failed to update purchase return" };
   }
 }
@@ -317,7 +318,7 @@ export async function deletePurchaseReturn(profileId: string, returnId: string) 
 
     return { success: true };
   } catch (e) {
-    console.error("[deletePurchaseReturn]", e);
+    logger.error("Failed to delete purchase return", e, { profileId, returnId });
     return { error: "Failed to delete purchase return" };
   }
 }

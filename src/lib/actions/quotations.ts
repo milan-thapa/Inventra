@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function getQuotations(profileId: string) {
   try {
@@ -19,7 +20,7 @@ export async function getQuotations(profileId: string) {
 
     return { data: quotations };
   } catch (error) {
-    console.error("Error fetching quotations:", error);
+    logger.error("Failed to fetch quotations", error, { profileId });
     return { error: "Failed to fetch quotations" };
   }
 }
@@ -42,7 +43,7 @@ export async function getQuotation(id: string, profileId: string) {
 
     return { data: quotation };
   } catch (error) {
-    console.error("Error fetching quotation:", error);
+    logger.error("Failed to fetch quotation", error, { profileId, id });
     return { error: "Failed to fetch quotation" };
   }
 }
@@ -57,7 +58,7 @@ export async function getNextQuotationNo(profileId: string) {
     const nextNo = lastQuotation ? lastQuotation.quotationNo + 1 : 1;
     return { data: nextNo };
   } catch (error) {
-    console.error("Error getting next quotation number:", error);
+    logger.error("Failed to get next quotation number", error, { profileId });
     return { error: "Failed to get next quotation number" };
   }
 }
@@ -127,7 +128,7 @@ export async function createQuotation(profileId: string, data: {
 
     return { data: quotation };
   } catch (error) {
-    console.error("Error creating quotation:", error);
+    logger.error("Failed to create quotation", error, { profileId });
     return { error: "Failed to create quotation" };
   }
 }
@@ -199,7 +200,7 @@ export async function updateQuotation(
 
     return { data: quotation };
   } catch (error) {
-    console.error("Error updating quotation:", error);
+    logger.error("Failed to update quotation", error, { profileId, id });
     return { error: "Failed to update quotation" };
   }
 }
@@ -234,7 +235,7 @@ export async function deleteQuotation(id: string, profileId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting quotation:", error);
+    logger.error("Failed to delete quotation", error, { profileId, id });
     return { error: "Failed to delete quotation" };
   }
 }
@@ -330,7 +331,7 @@ export async function convertQuotationToSale(
 
     return { data: sale };
   } catch (error) {
-    console.error("Error converting quotation to sale:", error);
+    logger.error("Failed to convert quotation to sale", error, { profileId, quotationId });
     return { error: "Failed to convert quotation to sale" };
   }
 }

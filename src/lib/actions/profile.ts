@@ -20,7 +20,8 @@ export async function getProfiles() {
       orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
     });
     return { data: profiles };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch profiles", e);
     return { error: "Failed to fetch profiles" };
   }
 }
@@ -48,7 +49,8 @@ export async function getActiveProfile(profileId?: string) {
     }
 
     return { data: profile };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to fetch active profile", e);
     return { error: "Failed to fetch profile" };
   }
 }
@@ -86,7 +88,7 @@ export async function createProfile(input: CreateProfileInput) {
           },
         });
       } catch (userError) {
-        console.error("[createProfile] Failed to create user:", userError);
+        logger.error("Failed to create user during profile creation", userError);
         return { error: "Failed to create user account" };
       }
     }
@@ -110,7 +112,7 @@ export async function createProfile(input: CreateProfileInput) {
         },
       });
     } catch (profileError) {
-      console.error("[createProfile] Failed to create profile:", profileError);
+      logger.error("Failed to create profile", profileError);
       return { error: "Failed to create profile. Please try again." };
     }
 
@@ -121,21 +123,21 @@ export async function createProfile(input: CreateProfileInput) {
           db.expenseCategory.create({
             data: { profileId: profile.id, name, isDefault: true },
           }).catch(e => {
-            console.error(`[createProfile] Failed to create expense category "${name}":`, e);
+            logger.error(`Failed to create expense category "${name}"`, e, { profileId: profile.id });
           })
         ),
         ...DEFAULT_INCOME_CATEGORIES.map((name) =>
           db.incomeCategory.create({
             data: { profileId: profile.id, name, isDefault: true },
           }).catch(e => {
-            console.error(`[createProfile] Failed to create income category "${name}":`, e);
+            logger.error(`Failed to create income category "${name}"`, e, { profileId: profile.id });
           })
         ),
         ...DEFAULT_ITEM_CATEGORIES.map((name) =>
           db.itemCategory.create({
             data: { profileId: profile.id, name },
           }).catch(e => {
-            console.error(`[createProfile] Failed to create item category "${name}":`, e);
+            logger.error(`Failed to create item category "${name}"`, e, { profileId: profile.id });
           })
         ),
         // Create default Cash account
@@ -148,18 +150,18 @@ export async function createProfile(input: CreateProfileInput) {
             currentBalance: 0,
           },
         }).catch(e => {
-          console.error("[createProfile] Failed to create default Cash account:", e);
+          logger.error("Failed to create default Cash account", e, { profileId: profile.id });
         }),
       ]);
     } catch (seedError) {
-      console.error("[createProfile] Failed to seed default data:", seedError);
+      logger.error("Failed to seed default data for profile", seedError, { profileId: profile.id });
       // Don't fail the entire profile creation if seeding fails
     }
 
     revalidatePath("/dashboard");
     return { data: profile };
   } catch (e) {
-    console.error("[createProfile] Unexpected error:", e);
+    logger.error("Unexpected error during profile creation", e);
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -190,7 +192,8 @@ export async function switchProfile(profileId: string) {
 
     revalidatePath("/", "layout");
     return { success: true };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to switch profile", e, { profileId });
     return { error: "Failed to switch profile" };
   }
 }
@@ -263,7 +266,8 @@ export async function updateTaxSettings(
 
     revalidatePath("/settings/tax");
     return { data: updated };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to update tax settings", e, { profileId, settings });
     return { error: "Failed to update tax settings" };
   }
 }
@@ -300,7 +304,8 @@ export async function updatePersonalProfile(
     revalidatePath("/settings/personal-profile");
     revalidatePath("/dashboard");
     return { data: updated };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to update personal profile", e, { profileId });
     return { error: "Failed to update profile" };
   }
 }
@@ -326,7 +331,8 @@ export async function updateUserAccount(
 
     revalidatePath("/settings/my-account");
     return { data: updated };
-  } catch {
+  } catch (e) {
+    logger.error("Failed to update user account", e);
     return { error: "Failed to update account" };
   }
 }
@@ -399,15 +405,15 @@ export async function getFeatureSettings(profileId: string) {
 // ── Check if user has profiles ────────────────────────────
 export async function hasProfiles(): Promise<boolean> {
   const session = await auth();
-  if (!session?.user?.id) {
-    console.log("[hasProfiles] No session or user ID");
+  if (!session?.user?.id) return false;
+
+  try {
+    const count = await db.profile.count({
+      where: { userId: session.user.id },
+    });
+    return count > 0;
+  } catch (e) {
+    logger.error("Failed to check if user has profiles", e);
     return false;
   }
-
-  console.log("[hasProfiles] Checking profiles for user:", session.user.id);
-  const count = await db.profile.count({
-    where: { userId: session.user.id },
-  });
-  console.log("[hasProfiles] Profile count:", count);
-  return count > 0;
 }

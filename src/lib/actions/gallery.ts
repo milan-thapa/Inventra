@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function getBillImages(profileId: string) {
   const session = await auth();
@@ -16,7 +17,7 @@ export async function getBillImages(profileId: string) {
     });
     return { data: images };
   } catch (e) {
-    console.error("[getBillImages]", e);
+    logger.error("Failed to fetch bill images", e, { profileId });
     return { error: "Failed to fetch bill images" };
   }
 }
@@ -40,7 +41,7 @@ export async function createBillImage(
     revalidatePath("/business-tools/bill-gallery");
     return { data: image };
   } catch (e) {
-    console.error("[createBillImage]", e);
+    logger.error("Failed to create bill image", e, { profileId });
     return { error: "Failed to create bill image" };
   }
 }
@@ -56,7 +57,7 @@ export async function deleteBillImage(profileId: string, imageId: string) {
     revalidatePath("/business-tools/bill-gallery");
     return { success: true };
   } catch (e) {
-    console.error("[deleteBillImage]", e);
+    logger.error("Failed to delete bill image", e, { profileId, imageId });
     return { error: "Failed to delete bill image" };
   }
 }

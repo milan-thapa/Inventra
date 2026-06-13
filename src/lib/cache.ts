@@ -1,5 +1,6 @@
 // src/lib/cache.ts
 import { redis } from "./redis";
+import { logger } from "./logger";
 
 const CACHE_PREFIX = "cache:";
 const DEFAULT_TTL = 3600; // 1 hour in seconds
@@ -16,7 +17,7 @@ export async function setCache(
     const cacheKey = `${CACHE_PREFIX}${key}`;
     await redis.set(cacheKey, JSON.stringify(value), { ex: ttl });
   } catch (error) {
-    console.error("Cache set error:", error);
+    logger.error("Cache set error", error, { key });
   }
 }
 
@@ -30,7 +31,7 @@ export async function getCache<T>(key: string): Promise<T | null> {
     if (value === null) return null;
     return JSON.parse(value as string) as T;
   } catch (error) {
-    console.error("Cache get error:", error);
+    logger.error("Cache get error", error, { key });
     return null;
   }
 }
@@ -43,7 +44,7 @@ export async function deleteCache(key: string): Promise<void> {
     const cacheKey = `${CACHE_PREFIX}${key}`;
     await redis.del(cacheKey);
   } catch (error) {
-    console.error("Cache delete error:", error);
+    logger.error("Cache delete error", error, { key });
   }
 }
 
@@ -57,7 +58,7 @@ export async function deleteCachePattern(pattern: string): Promise<void> {
       await redis.del(...keys);
     }
   } catch (error) {
-    console.error("Cache pattern delete error:", error);
+    logger.error("Cache pattern delete error", error, { pattern });
   }
 }
 
@@ -104,7 +105,7 @@ export async function getCacheStats(): Promise<{
       memory: 0, // Upstash doesn't provide memory usage
     };
   } catch (error) {
-    console.error("Cache stats error:", error);
+    logger.error("Cache stats error", error);
     return { keys: 0, memory: 0 };
   }
 }
