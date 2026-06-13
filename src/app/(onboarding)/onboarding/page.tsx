@@ -36,7 +36,7 @@ export default function OnboardingPage() {
     setLoading(true);
     try {
       const name = profileType === "PERSONAL" ? "Personal Finance" : businessName;
-      console.log("[Onboarding] Creating profile with:", { profileType, name, category });
+
 
       if (!name) {
         toast({ variant: "destructive", title: "Please enter a business name" });
@@ -50,7 +50,7 @@ export default function OnboardingPage() {
         category: category || undefined,
       });
 
-      console.log("[Onboarding] Profile creation response:", res);
+
 
       if ("error" in res && res.error) {
         toast({ variant: "destructive", title: res.error });

@@ -132,9 +132,13 @@ export async function deleteNotification(profileId: string, notificationId: stri
 }
 
 export async function deleteExpiredNotifications() {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
   try {
     await db.notification.deleteMany({
       where: {
+        userId: session.user.id,
         expiresAt: {
           lt: new Date(),
         },
@@ -160,6 +164,9 @@ export async function createNotification(
     scheduledFor?: Date;
   } = {}
 ) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
   try {
     const { category = "GENERAL", priority = "NORMAL", link, expiresAt, scheduledFor } = options;
 

@@ -5,9 +5,18 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
+async function verifyProfile(profileId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
+}
+
 export async function getNotificationPreferences(profileId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Unauthorized" };
+
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     const preferences = await db.notificationPreference.findMany({
@@ -31,6 +40,9 @@ export async function setNotificationPreference(
 ) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Unauthorized" };
+
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   try {
     await db.notificationPreference.upsert({
@@ -63,6 +75,9 @@ export async function setNotificationPreference(
 export async function initializeDefaultPreferences(profileId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Unauthorized" };
+
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
 
   const categories = ["GENERAL", "SALES", "PURCHASE", "PAYMENT", "REMINDER", "SYSTEM"];
   const channels = ["IN_APP", "EMAIL"];

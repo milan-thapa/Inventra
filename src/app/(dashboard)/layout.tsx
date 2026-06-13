@@ -15,11 +15,11 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  console.log("[DashboardLayout] Session:", session?.user?.id, session?.user?.email);
+
   if (!session?.user) redirect("/login");
 
   const profileExists = await hasProfiles();
-  console.log("[DashboardLayout] Profile exists:", profileExists);
+
   if (!profileExists) redirect("/onboarding");
 
   return (

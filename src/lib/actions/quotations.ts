@@ -4,7 +4,16 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
+async function verifyProfile(profileId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  return db.profile.findFirst({ where: { id: profileId, userId: session.user.id } });
+}
+
 export async function getQuotations(profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
   try {
     const quotations = await db.quotation.findMany({
       where: { profileId },
@@ -25,6 +34,9 @@ export async function getQuotations(profileId: string) {
 }
 
 export async function getQuotation(id: string, profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
   try {
     const quotation = await db.quotation.findFirst({
       where: { id, profileId },
@@ -48,6 +60,9 @@ export async function getQuotation(id: string, profileId: string) {
 }
 
 export async function getNextQuotationNo(profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
   try {
     const lastQuotation = await db.quotation.findFirst({
       where: { profileId },
@@ -73,11 +88,10 @@ export async function createQuotation(profileId: string, data: {
   validUntil?: Date;
   date: Date;
 }) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
 
     // Get next quotation number
     const nextQuotationNo = await getNextQuotationNo(profileId);
@@ -147,11 +161,10 @@ export async function updateQuotation(
     status?: string;
   }
 ) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
 
     // Update quotation with items in a transaction
     const quotation = await db.$transaction(async (tx) => {
@@ -205,11 +218,10 @@ export async function updateQuotation(
 }
 
 export async function deleteQuotation(id: string, profileId: string) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
 
     // Check if quotation exists and can be deleted
     const quotation = await db.quotation.findFirst({
@@ -249,11 +261,10 @@ export async function convertQuotationToSale(
     date: Date;
   }
 ) {
+  const profile = await verifyProfile(profileId);
+  if (!profile) return { error: "Unauthorized" };
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { error: "Unauthorized" };
-    }
 
     // Get quotation details
     const quotation = await getQuotation(quotationId, profileId);
